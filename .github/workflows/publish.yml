@@ -1,0 +1,53 @@
+name: Publish Maven Central
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing immutable release tag
+        required: true
+        default: '0.0.1'
+permissions:
+  contents: read
+concurrency:
+  group: central-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: maven-central
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check release identity and credentials
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          CENTRAL_USER: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          python3 -c 'import os,re; text=open("build.gradle.kts").read(); assert re.search(r"version = \""+re.escape(os.environ["RELEASE_VERSION"])+r"\"",text); assert all(os.environ.get(n) for n in ["CENTRAL_USER","CENTRAL_PASSWORD","SIGNING_KEY"]), "Configure Maven Central environment secrets first"'
+      - name: Verify and package
+        run: bash gradlew --no-daemon check publishReleasePublicationToLocalReleaseRepository
+      - run: python3 scripts/verify-publication.py
+      - run: bash gradlew --no-daemon -p examples/sdk-consumer assembleDebug assembleRelease lint
+      - name: Publish signed release
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: bash gradlew --no-daemon --no-configuration-cache publishAndReleaseToMavenCentral

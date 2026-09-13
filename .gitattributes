@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.webp binary
+# Preserve the exact generated BCV format, including its final separator line.
+*.api whitespace=-blank-at-eof
