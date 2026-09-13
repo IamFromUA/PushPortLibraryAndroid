@@ -2,11 +2,11 @@
 
 This is a direction for future work, not a promise that these capabilities are implemented.
 
-## First public release
+## Release follow-up
 
-- Signing and public Maven distribution. The publisher account, verified namespace and Apache 2.0 license are configured; see [release process](releasing.md).
+- Improve release automation and compatibility coverage. Signed version 0.0.1 is published on Maven Central; see [release process](releasing.md).
 - Stable HTTPS backend endpoint and a clean consumer integration test.
-- First source push and successful remote verification run; the standalone repository and CI workflow are prepared.
+- Broader consumer compatibility coverage in the standalone repository and CI workflow.
 - A documented consumer toolchain/device compatibility matrix.
 
 ## Integration experience

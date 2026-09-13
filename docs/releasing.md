@@ -2,7 +2,7 @@
 
 ## Current state
 
-The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Publication currently targets `build/maven-repository` in the workspace. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured; its environment credentials must be supplied before upload.
+The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Version `0.0.1` is published on Maven Central; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
 
 Publisher setup completed on 2026-09-13:
 
@@ -10,7 +10,7 @@ Publisher setup completed on 2026-09-13:
 - The owner selected Apache License 2.0 for the SDK. Copyright holder and publisher: Oleh Yurkov; project name: PushPort; public contact: `support@pushport.dev`.
 - The POM declares license, developer, SCM and issue tracker metadata. Canonical `LICENSE` and `NOTICE` files are included in all published code/documentation archives. See [licensing](licensing.md).
 
-Version `0.0.1` is a local pre-release version. Do not describe it as a public release until it can be resolved from the public repository.
+Version `0.0.1` is available as `dev.pushport:android-sdk:0.0.1` from the public Maven Central repository. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
 
 This candidate sends optional `androidId` metadata. Deploy the compatible backend before releasing the SDK; it accepts missing/null values from older clients and stores the field in the installation snapshot.
 
@@ -31,7 +31,7 @@ python scripts/verify-publication.py
 ./gradlew -p examples/sdk-consumer assembleDebug assembleRelease lint
 ```
 
-## Before the first Central publication
+## Publisher setup and publication checks
 
 - Commit and push the prepared SDK on the owner's explicit command, then confirm the GitHub verification workflow passes. Review the existing license, developer and SCM metadata before uploading.
 - Configure the Portal publishing token, GPG signing key and verification of the public key. Keep private credentials outside source control and distribution artifacts.
@@ -45,3 +45,7 @@ References: [Central requirements](https://central.sonatype.org/publish/requirem
 ## GitHub publication environment
 
 The manual `publish.yml` workflow checks the immutable tag against the build version and reruns package/consumer verification. In the **maven-central** environment set `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (the Portal User Token pair), `SIGNING_KEY` (armored private PGP key), `SIGNING_KEY_ID` (last eight hex digits), and `SIGNING_PASSWORD`. Only the public PGP key goes to a keyserver. The workflow signs in memory and invokes `publishAndReleaseToMavenCentral`. Ordinary pushes only verify. Public registry availability must be checked before announcing the Maven coordinate as released.
+
+## Publisher policy
+
+Sonatype announced Publisher Pro requirements from 2026-10-01 for artifacts supporting commercial products or services. Review the [current policy](https://central.sonatype.org/news/20260908_publisher_tiers_commercial_use/) before publishing future versions for a commercial PushPort offering. An open-source license alone does not determine eligibility.

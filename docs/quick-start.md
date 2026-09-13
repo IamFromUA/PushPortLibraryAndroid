@@ -11,7 +11,7 @@
 
 ## Gradle
 
-After the first public release, Gradle downloads the SDK and its dependencies from the standard repositories. In the application's `settings.gradle.kts`, ensure these repositories are present:
+Gradle downloads the SDK and its dependencies from the standard repositories. In the application's `settings.gradle.kts`, ensure these repositories are present:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -30,7 +30,7 @@ dependencies {
 }
 ```
 
-Until publication, add the local Maven repository described below. Copying a raw AAR by itself loses transitive dependency metadata and is not the supported installation method.
+For unpublished local development builds only, add the local Maven repository described below. Copying a raw AAR by itself loses transitive dependency metadata and is not the supported installation method.
 
 ## Kotlin
 

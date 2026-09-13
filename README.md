@@ -6,7 +6,7 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Status:** pre-release. Version `0.0.1` is available in the local Maven repository produced by this build; it has **not** been published to Maven Central. The SDK is licensed under [Apache License 2.0](LICENSE); Central publication is a separate release step.
+**Version 0.0.1 is published on Maven Central** as `dev.pushport:android-sdk:0.0.1`. The SDK is licensed under [Apache License 2.0](LICENSE).
 
 ## Integration
 
@@ -21,7 +21,7 @@ PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 
 3. Initialize PushPort from your `Application.onCreate` and request notification permission from an activity when appropriate.
 
-The dependency above currently requires the [local repository setup](docs/quick-start.md#local-development). After Central publication it will resolve through `mavenCentral()`. `google()` is also needed for Android and Firebase dependencies.
+The dependency resolves through `mavenCentral()`. Add `google()` for Android and Firebase dependencies. No private repository, credentials or manual AAR download is needed.
 
 Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are included through the dependency. The host application does not need a PushPort service-account key, `google-services.json`, or Google Services Gradle plugin for this integration. Its own Firebase integration can remain independent.
 
@@ -38,7 +38,7 @@ Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are 
 | [Data and lifecycle](docs/data-and-lifecycle.md) | Collected data, synchronization, retries, storage |
 | [Compatibility](docs/compatibility.md) | API baseline, persistent components, versioning |
 | [Testing](docs/testing.md) | Local checks, consumer verification, emulator scenarios |
-| [Release process](docs/releasing.md) | Maven artifacts and remaining publication steps |
+| [Release process](docs/releasing.md) | Maven artifacts, publishing and maintaining releases |
 | [Licensing](docs/licensing.md) | SDK license, attribution and distribution scope |
 | [Roadmap](docs/roadmap.md) | Current limits and directions for growth |
 | [Contributing](CONTRIBUTING.md) | Development and review conventions |
@@ -62,4 +62,4 @@ Copyright 2026 Oleh Yurkov. Licensed under the [Apache License, Version 2.0](LIC
 
 PushPort is the project's public name. The SDK publisher and copyright holder is Oleh Yurkov; the public contact is [support@pushport.dev](mailto:support@pushport.dev).
 
-This license covers this SDK module, including its source code, tests, build scripts and documentation. Other PushPort services and sibling projects have separate terms. Third-party dependencies retain their own licenses. The [release process](docs/releasing.md) tracks the remaining publication steps.
+This license covers this SDK module, including its source code, tests, build scripts and documentation. Other PushPort services and sibling projects have separate terms. Third-party dependencies retain their own licenses. The [release process](docs/releasing.md) documents publisher setup and future releases.
