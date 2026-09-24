@@ -5,9 +5,8 @@ on:
       version:
         description: Existing immutable release tag
         required: true
-        default: '0.0.1'
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: central-publication
   cancel-in-progress: false
@@ -51,3 +50,30 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: bash gradlew --no-daemon --no-configuration-cache publishAndReleaseToMavenCentral
+      - name: Wait for public Maven Central artifact
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          url="https://repo.maven.apache.org/maven2/dev/pushport/android-sdk/${RELEASE_VERSION}/android-sdk-${RELEASE_VERSION}.pom"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --head "$url" >/dev/null; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Maven Central artifact is not publicly available: $url" >&2
+          exit 1
+      - name: Create matching GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "GitHub release already exists: $RELEASE_VERSION"
+            exit 0
+          fi
+          gh release create "$RELEASE_VERSION" \
+            --verify-tag \
+            --title "PushPort Android SDK $RELEASE_VERSION" \
+            --generate-notes \
+            --latest

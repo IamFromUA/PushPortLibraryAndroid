@@ -26,7 +26,7 @@ Add the dependency in the application module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("dev.pushport:android-sdk:0.0.1")
+    implementation("dev.pushport:android-sdk:0.0.2")
 }
 ```
 
@@ -130,7 +130,7 @@ Import `dev.pushport.sdk.PushPortConfig`. Keep test configuration in the debug v
 
 An installation cannot switch backend or app ID. Use a separate debug application ID or clear that test application's data when changing the endpoint. Production updates must preserve the backend URL.
 
-Debug-only HTTP is available for `localhost`, `127.0.0.1`, `10.0.2.2`, and `::1` with `allowInsecureLocalhost = true`. Android must also permit cleartext traffic in that debug application. HTTPS/ngrok avoids this extra configuration.
+Debug-only HTTP is available for `localhost`, `127.0.0.2`, `10.0.2.2`, and `::1` with `allowInsecureLocalhost = true`. Android must also permit cleartext traffic in that debug application. HTTPS/ngrok avoids this extra configuration.
 
 ## Verify the integration
 

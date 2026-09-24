@@ -19,6 +19,13 @@ internal data class FirebaseConfiguration(
     val projectId: String,
 )
 
+internal data class UsageSnapshot(
+    val firstSessionAt: Long? = null,
+    val lastSessionAt: Long? = null,
+    val sessionCount: Long = 0,
+    val totalUsageMillis: Long = 0,
+)
+
 internal data class DeviceSnapshot(
     val revision: Long = 0,
     val fcmToken: String? = null,
@@ -38,6 +45,8 @@ internal data class DeviceSnapshot(
     val manufacturer: String,
     val model: String,
     val androidId: String? = null,
+    val carrier: String? = null,
+    val usage: UsageSnapshot? = null,
 ) {
     override fun toString(): String = "DeviceSnapshot(revision=$revision, packageName=$packageName, locale=$locale, fcmToken=<redacted>)"
 }
@@ -59,6 +68,15 @@ internal data class InstallationState(
     val pushError: String? = null,
     val pendingOpenedMessages: List<String> = emptyList(),
     val receivedMessages: List<String> = emptyList(),
+    val usage: UsageSnapshot = UsageSnapshot(),
+    val lastActivityAt: Long = 0,
+    val user: dev.pushport.sdk.PushPortUser? = null,
+    val nextUserRevision: Long = 0,
+    val pendingUserOperations: List<UserOperation> = emptyList(),
+    val consentRequired: Boolean = false,
+    val consentGiven: Boolean = false,
 ) {
+    val collectionAllowed: Boolean get() = !consentRequired || consentGiven
+
     override fun toString(): String = "InstallationState(identity=$identity, revision=$revision)"
 }

@@ -14,9 +14,9 @@ internal class NotificationOpenTracker(
     private val scheduler: SyncScheduler,
 ) {
     fun opened(messageId: String) {
-        if (!isCanonicalUuid(messageId) || repository.read().config == null) return
+        if (!isCanonicalUuid(messageId) || repository.read().config == null || !repository.read().collectionAllowed) return
         repository.update { state ->
-            if (messageId in state.pendingOpenedMessages) {
+            if (!state.collectionAllowed || messageId in state.pendingOpenedMessages) {
                 state
             } else {
                 state.copy(

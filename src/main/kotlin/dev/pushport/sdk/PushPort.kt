@@ -25,6 +25,118 @@ import dev.pushport.sdk.internal.runtime.SdkRuntime
  * [requestNotificationPermission] or the host application's permission flow.
  */
 public object PushPort {
+    /** Last confirmed profile; null before registration. Does not make a network request. */
+    @JvmStatic
+    public fun user(context: Context): PushPortUser? = SdkRuntime.from(context).users.profile()
+
+    /** Links this installation to an account using a short-lived proof issued by your trusted backend.
+     * Requires initialization and consent. Switching accounts discards unsent user operations.
+     * Obtain a new proof after expiry or a failed login; never embed your backend credentials in the app.
+     */
+    @JvmStatic
+    public fun login(
+        context: Context,
+        externalId: String,
+        identityToken: String,
+    ): Unit =
+        SdkRuntime
+            .from(
+                context,
+            ).users
+            .enqueue(
+                dev.pushport.sdk.internal.model
+                    .UserOperation(kind = "login", externalId = externalId, identityToken = identityToken),
+            )
+
+    /** Queues detachment of this installation only; other devices stay linked. Discards unsent user operations. */
+    @JvmStatic
+    public fun logout(context: Context): Unit =
+        SdkRuntime.from(context).users.enqueue(
+            dev.pushport.sdk.internal.model
+                .UserOperation(kind = "logout"),
+        )
+
+    /** Queues a tag patch (up to 50 tags, key 64/value 256 characters); null values remove keys. */
+    @JvmStatic
+    public fun setTags(
+        context: Context,
+        tags: Map<String, String?>,
+    ): Unit =
+        SdkRuntime.from(context).users.enqueue(
+            dev.pushport.sdk.internal.model
+                .UserOperation(kind = "tags", tags = tags),
+        )
+
+    /** Queues an explicitly supplied contact email; null clears it. Does not subscribe to email delivery. */
+    @JvmStatic
+    public fun setEmail(
+        context: Context,
+        email: String?,
+    ): Unit =
+        SdkRuntime.from(context).users.enqueue(
+            dev.pushport.sdk.internal.model
+                .UserOperation(kind = "email", email = email),
+        )
+
+    /** Queues an explicitly supplied E.164 phone; null clears it. Does not subscribe to SMS. */
+    @JvmStatic
+    public fun setPhoneNumber(
+        context: Context,
+        phoneNumber: String?,
+    ): Unit =
+        SdkRuntime.from(context).users.enqueue(
+            dev.pushport.sdk.internal.model
+                .UserOperation(kind = "phone", phoneNumber = phoneNumber),
+        )
+
+    /** Queues coordinates supplied with the host's permission flow; two nulls clear them. Never requests GPS. */
+    @JvmStatic
+    public fun setLocation(
+        context: Context,
+        latitude: Double?,
+        longitude: Double?,
+    ): Unit =
+        SdkRuntime
+            .from(
+                context,
+            ).users
+            .enqueue(
+                dev.pushport.sdk.internal.model
+                    .UserOperation(kind = "location", latitude = latitude, longitude = longitude),
+            )
+
+    /** Queues an event exactly once per acknowledged operation. Up to 20 string properties (64/256 characters).
+     * The outbox holds 100 operations; a full queue throws IllegalStateException instead of silently dropping data.
+     */
+    @JvmStatic
+    public fun trackEvent(
+        context: Context,
+        name: String,
+        properties: Map<String, String>,
+    ): Unit =
+        SdkRuntime
+            .from(
+                context,
+            ).users
+            .enqueue(
+                dev.pushport.sdk.internal.model
+                    .UserOperation(kind = "event", eventName = name, eventProperties = properties),
+            )
+
+    /** Call before initialization to defer all SDK network/data collection until consent is given. */
+    @JvmStatic
+    public fun setConsentRequired(
+        context: Context,
+        required: Boolean,
+    ): Unit = SdkRuntime.from(context).consent(required = required)
+
+    /** Persists consent. Revocation stops future collection and notification presentation, but does not erase server history. */
+    @JvmStatic
+    public fun setConsentGiven(
+        context: Context,
+        given: Boolean,
+    ): Unit = SdkRuntime.from(context).consent(given = given)
+
     /**
      * Initializes with the standard PushPort endpoint embedded in this SDK build.
      *

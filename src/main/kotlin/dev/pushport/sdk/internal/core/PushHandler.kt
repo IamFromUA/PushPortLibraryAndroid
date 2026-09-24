@@ -19,6 +19,7 @@ internal class PushHandler(
         repository.update { state ->
             if (state.config?.appId != message.appId) return@update state
             owned = true
+            if (!state.collectionAllowed) return@update state
             if (message.id in state.receivedMessages) return@update state
             if (state.subscribed) presenter.show(message)
             state.copy(receivedMessages = (state.receivedMessages + message.id).takeLast(PushProtocol.MAX_PENDING_MESSAGES))

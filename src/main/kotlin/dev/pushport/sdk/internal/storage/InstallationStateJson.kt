@@ -6,6 +6,7 @@ package dev.pushport.sdk.internal.storage
 import dev.pushport.sdk.PushPortConfig
 import dev.pushport.sdk.internal.model.InstallationIdentity
 import dev.pushport.sdk.internal.model.InstallationState
+import dev.pushport.sdk.internal.serialization.UserJson
 import dev.pushport.sdk.internal.serialization.WireJson
 import dev.pushport.sdk.internal.serialization.stringOrNull
 import dev.pushport.sdk.internal.serialization.strings
@@ -22,7 +23,7 @@ internal class InstallationStateJson {
                 PushPortConfig(it.getString("appId"), it.getString("serverUrl"), it.optBoolean("allowInsecureLocalhost"))
             }
         val identity = json.stringOrNull("installationId")?.let { InstallationIdentity(it, json.getString("secret")) }
-        require(config == null || identity != null) { "Stored installation identity is missing" }
+        require(config == null || identity != null || json.optBoolean("consentRequired")) { "Stored installation identity is missing" }
         return InstallationState(
             config = config,
             identity = identity,
@@ -39,6 +40,20 @@ internal class InstallationStateJson {
             pushError = json.stringOrNull("pushError"),
             pendingOpenedMessages = json.optJSONArray("events")?.strings().orEmpty(),
             receivedMessages = json.optJSONArray("receivedMessages")?.strings().orEmpty(),
+            usage =
+                json.optJSONObject("usage")?.let(WireJson::usage) ?: dev.pushport.sdk.internal.model
+                    .UsageSnapshot(),
+            lastActivityAt = json.optLong("lastActivityAt"),
+            user = json.optJSONObject("user")?.let(UserJson::profile),
+            nextUserRevision = json.optLong("nextUserRevision"),
+            pendingUserOperations =
+                json
+                    .optJSONArray("userOperations")
+                    ?.let { a ->
+                        (0 until a.length()).map { UserJson.operation(a.getJSONObject(it)) }
+                    }.orEmpty(),
+            consentRequired = json.optBoolean("consentRequired"),
+            consentGiven = json.optBoolean("consentGiven"),
         )
     }
 
@@ -59,6 +74,13 @@ internal class InstallationStateJson {
                 .put("pushError", state.pushError)
                 .put("events", JSONArray(state.pendingOpenedMessages))
                 .put("receivedMessages", JSONArray(state.receivedMessages))
+                .put("usage", WireJson.usage(state.usage))
+                .put("lastActivityAt", state.lastActivityAt)
+                .put("user", state.user?.let(UserJson::profile))
+                .put("nextUserRevision", state.nextUserRevision)
+                .put("userOperations", JSONArray(state.pendingUserOperations.map(UserJson::operation)))
+                .put("consentRequired", state.consentRequired)
+                .put("consentGiven", state.consentGiven)
         state.identity?.let { json.put("installationId", it.id).put("secret", it.secret) }
         state.config?.let {
             json.put(

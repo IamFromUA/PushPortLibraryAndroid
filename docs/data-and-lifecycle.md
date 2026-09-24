@@ -1,16 +1,20 @@
 # Data and lifecycle
 
+The user/session/consent additions below are unreleased; see [data and users](data-and-users.md) for version availability and integration.
+
 ## Data handled by the SDK
 
 | Data | Purpose |
 | --- | --- |
 | Random installation UUID and generated installation secret | Identify and authenticate this app installation |
-| Android ID (`Settings.Secure.ANDROID_ID`), when available | Additional device metadata for the application's owner; does not replace the installation UUID |
+| Android ID (`Settings.Secure.ANDROID_ID`), when available | Device metadata; backend V11 links device profiles within an app using this value, while installation UUIDs remain separate |
 | FCM token | Address push messages to the device |
 | Package, app version, SDK version | Bind registration to the correct application and diagnose compatibility |
 | Effective language/locale, ordered locale lists, timezone | Language targeting and scheduling inputs |
 | Notification permission and subscription preference | Record whether notifications can be displayed |
 | Android version/API, manufacturer, model | Device compatibility diagnostics |
+| Carrier, foreground sessions and duration | Activity metrics distinct from background sync |
+| Linked user ID and explicitly provided External ID/tags/contact/location/events | Optional app-owned user model; see [data and users](data-and-users.md) |
 | Message IDs and opened events | Deduplication and acknowledgement |
 
 The SDK does not request location permission, read GPS, Advertising ID, IMEI or contacts. A country subtag in a locale is a language preference, not a verified physical country. No IP-based geolocation is implemented in the SDK.
@@ -19,7 +23,9 @@ Android ID is read after initialization and sent as the optional `androidId` reg
 
 The local snapshot stores this value alongside the other metadata and detects changes during synchronization. Existing stored snapshots without `androidId` remain readable and keep their installation identity. Diagnostic string representations omit its value. Android ID collection belongs in the integrating application's description of the data collected by this SDK.
 
-Data starts being registered after explicit initialization. `setSubscribed(false)` suppresses new PushPort notification presentation; it is not a data-deletion or collection-consent API. Collection consent and installation deletion need separate product/API design before promising them to integrators.
+With backend V11, the first registration uses a valid Android ID to link the device profile within the same PushPort app. Reinstalling normally keeps one user with two distinct installations. Android ID never replaces the installation UUID or secret, and explicit account login remains separate. See [default identity and fallback behavior](data-and-users.md#default-android-behavior--no-extra-integration-calls).
+
+Data starts being registered after explicit initialization, subject to the configured consent gate. `setSubscribed(false)` suppresses new PushPort notification presentation; it is not a data-deletion or collection-consent API. Call `setConsentRequired` before initialization and `setConsentGiven` from the host consent flow. Server-side deletion remains separate; revoking consent does not erase stored history.
 
 ## Initialization and persistence
 
@@ -33,7 +39,7 @@ Unknown future schemas and invalid storage are not silently overwritten. A migra
 
 WorkManager enforces network connectivity, schedules periodic work at a 15-minute minimum interval, and applies OS scheduling limits. The interval is not an exact timer or delivery guarantee. Foreground resumes and environment changes also schedule refreshes.
 
-The coordinator gets Firebase options, refreshes the token, captures the latest snapshot, registers changed data, then sends queued opened events. Unchanged registration is refreshed after a 12-hour heartbeat. A successful request acknowledges only the revision it actually sent; changes made during the request remain pending.
+The coordinator gets Firebase options, refreshes the token, captures the latest snapshot, registers changed data, then sends queued opened events and user operations. Unchanged registration is refreshed after a 12-hour heartbeat. A successful request acknowledges only the revision it actually sent; changes made during the request remain pending.
 
 Transient HTTP/I/O failures retry with exponential backoff. FCM timeout/temporary failure also requests a bounded retry while allowing metadata registration and opened-event uploads. A cached token is retained only while the Firebase configuration is unchanged. Invalid Firebase settings stop the current work with a diagnostic; explicit `firebase: null` means the server has disconnected Firebase. A malformed configuration response is not treated as a disconnect.
 

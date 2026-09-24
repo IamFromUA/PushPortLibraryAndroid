@@ -17,14 +17,24 @@ public final class dev/pushport/sdk/PushPort {
 	public static final fun handleNotificationIntent (Landroid/content/Context;Landroid/content/Intent;)V
 	public static final fun init (Landroid/content/Context;Ldev/pushport/sdk/PushPortConfig;)V
 	public static final fun initWithContext (Landroid/content/Context;Ljava/lang/String;)V
+	public static final fun login (Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)V
+	public static final fun logout (Landroid/content/Context;)V
 	public static final fun requestNotificationPermission (Landroid/app/Activity;)V
 	public static final fun requestNotificationPermission (Landroid/app/Activity;I)V
 	public static synthetic fun requestNotificationPermission$default (Landroid/app/Activity;IILjava/lang/Object;)V
 	public static final fun restore (Landroid/content/Context;)Z
+	public static final fun setConsentGiven (Landroid/content/Context;Z)V
+	public static final fun setConsentRequired (Landroid/content/Context;Z)V
+	public static final fun setEmail (Landroid/content/Context;Ljava/lang/String;)V
 	public static final fun setLocale (Landroid/content/Context;Ljava/lang/String;)V
+	public static final fun setLocation (Landroid/content/Context;Ljava/lang/Double;Ljava/lang/Double;)V
+	public static final fun setPhoneNumber (Landroid/content/Context;Ljava/lang/String;)V
 	public static final fun setSubscribed (Landroid/content/Context;Z)V
+	public static final fun setTags (Landroid/content/Context;Ljava/util/Map;)V
 	public static final fun status (Landroid/content/Context;)Ldev/pushport/sdk/PushPortStatus;
 	public static final fun sync (Landroid/content/Context;)V
+	public static final fun trackEvent (Landroid/content/Context;Ljava/lang/String;Ljava/util/Map;)V
+	public static final fun user (Landroid/content/Context;)Ldev/pushport/sdk/PushPortUser;
 }
 
 public final class dev/pushport/sdk/PushPortConfig {
@@ -74,6 +84,31 @@ public final class dev/pushport/sdk/PushPortStatus {
 	public final fun getSubscribed ()Z
 	public final fun getSyncError ()Ljava/lang/String;
 	public final fun getSystemLocales ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/pushport/sdk/PushPortUser {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Double;J)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/Double;
+	public final fun component7 ()Ljava/lang/Double;
+	public final fun component8 ()J
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Double;J)Ldev/pushport/sdk/PushPortUser;
+	public static synthetic fun copy$default (Ldev/pushport/sdk/PushPortUser;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Double;Ljava/lang/Double;JILjava/lang/Object;)Ldev/pushport/sdk/PushPortUser;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEmail ()Ljava/lang/String;
+	public final fun getExternalId ()Ljava/lang/String;
+	public final fun getLatitude ()Ljava/lang/Double;
+	public final fun getLongitude ()Ljava/lang/Double;
+	public final fun getPhoneNumber ()Ljava/lang/String;
+	public final fun getRevision ()J
+	public final fun getTags ()Ljava/util/Map;
+	public final fun getUserId ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

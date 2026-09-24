@@ -1,6 +1,6 @@
 # Published SDK consumer check
 
-This independent Android Gradle build consumes `dev.pushport:android-sdk:0.0.1` from the SDK repository's local Maven output. It has no project dependency on the SDK or backend. Kotlin and Java source call the public API, and the release variant enables R8/resource shrinking.
+This independent Android Gradle build consumes `dev.pushport:android-sdk:0.0.2` from the SDK repository's local Maven output. It has no project dependency on the SDK or backend. Kotlin and Java source call the public API, and the release variant enables R8/resource shrinking.
 
 From the SDK repository root, publish the SDK and run:
 

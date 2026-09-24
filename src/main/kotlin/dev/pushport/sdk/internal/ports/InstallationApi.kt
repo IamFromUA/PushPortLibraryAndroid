@@ -11,10 +11,27 @@ import dev.pushport.sdk.internal.model.InstallationIdentity
 internal interface InstallationApi {
     fun configuration(packageName: String): FirebaseConfiguration?
 
+    fun settings(packageName: String): dev.pushport.sdk.internal.model.RemoteConfiguration =
+        dev.pushport.sdk.internal.model
+            .RemoteConfiguration(configuration(packageName))
+
     fun register(
         identity: InstallationIdentity,
         snapshot: DeviceSnapshot,
     )
+
+    fun registerAndReadUser(
+        identity: InstallationIdentity,
+        snapshot: DeviceSnapshot,
+    ): dev.pushport.sdk.PushPortUser? {
+        register(identity, snapshot)
+        return null
+    }
+
+    fun updateUser(
+        identity: InstallationIdentity,
+        operation: dev.pushport.sdk.internal.model.UserOperation,
+    ): dev.pushport.sdk.PushPortUser = error("User API unavailable")
 
     fun opened(
         identity: InstallationIdentity,

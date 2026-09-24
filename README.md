@@ -6,7 +6,7 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Version 0.0.1 is published on Maven Central** as `dev.pushport:android-sdk:0.0.1`. The SDK is licensed under [Apache License 2.0](LICENSE).
+**Version 0.0.2 is published on Maven Central** as `dev.pushport:android-sdk:0.0.2`. The SDK is licensed under [Apache License 2.0](LICENSE).
 
 ## Integration
 
@@ -15,7 +15,7 @@ PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 
    ```kotlin
    dependencies {
-       implementation("dev.pushport:android-sdk:0.0.1")
+       implementation("dev.pushport:android-sdk:0.0.2")
    }
    ```
 
@@ -37,6 +37,7 @@ Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are 
 | [Notification images and links](docs/rich-notifications.md) | Image limits, click behavior, network access |
 | [Data and lifecycle](docs/data-and-lifecycle.md) | Collected data, synchronization, retries, storage |
 | [Compatibility](docs/compatibility.md) | API baseline, persistent components, versioning |
+| [Data and users](docs/data-and-users.md) | Collected fields, sessions, consent and verified External ID (unreleased) |
 | [Testing](docs/testing.md) | Local checks, consumer verification, emulator scenarios |
 | [Release process](docs/releasing.md) | Maven artifacts, publishing and maintaining releases |
 | [Licensing](docs/licensing.md) | SDK license, attribution and distribution scope |
@@ -50,7 +51,7 @@ Source code and contribution instructions are available in [PushPortLibraryAndro
 
 ## Design
 
-The public surface is `PushPort`, `PushPortConfig`, and `PushPortStatus`. Internal services receive their dependencies through constructors. Core synchronization rules depend on models and narrow interfaces; Android, storage, JSON and Firebase stay in adapters. Architecture tests enforce these boundaries.
+The public surface is `PushPort`, `PushPortConfig`, `PushPortStatus`, and `PushPortUser`. Internal services receive their dependencies through constructors. Core synchronization rules depend on models and narrow interfaces; Android, storage, JSON and Firebase stay in adapters. Architecture tests enforce these boundaries.
 
 SDK initialization remains explicit. No activity is retained, no permission dialog is shown automatically, and no network call runs in the public initialization or status method.
 
@@ -63,3 +64,5 @@ Copyright 2026 Oleh Yurkov. Licensed under the [Apache License, Version 2.0](LIC
 PushPort is the project's public name. The SDK publisher and copyright holder is Oleh Yurkov; the public contact is [support@pushport.dev](mailto:support@pushport.dev).
 
 This license covers this SDK module, including its source code, tests, build scripts and documentation. Other PushPort services and sibling projects have separate terms. Third-party dependencies retain their own licenses. The [release process](docs/releasing.md) documents publisher setup and future releases.
+
+See [partner tracking links](docs/partner-integration.md) for application-side URL construction using the confirmed user ID.

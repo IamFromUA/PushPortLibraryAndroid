@@ -27,11 +27,12 @@ internal class InstallationController(
             require(previous == null || (previous.appId == validated.appId && previous.serverUrl == validated.serverUrl)) {
                 "An installation belongs to one PushPort app. Clear test application data before changing appId or serverUrl."
             }
-            state.copy(config = validated, identity = state.identity ?: newIdentity())
+            state.copy(config = validated, identity = state.identity ?: if (state.collectionAllowed) newIdentity() else null)
         }
     }
 
     fun sync(observedLocales: List<String>? = null) {
+        if (!repository.read().collectionAllowed) return
         if (collector.capture(observedLocales) != null) scheduler.enqueue()
     }
 

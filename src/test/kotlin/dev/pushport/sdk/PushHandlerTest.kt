@@ -42,6 +42,31 @@ class PushHandlerTest {
         )
     }
 
+    @Test fun `revoked consent consumes owned messages without display or event capture`() {
+        val fixture = CoreFixture()
+        fixture.repository.update { it.copy(consentRequired = true, consentGiven = false) }
+        val shown = mutableListOf<PushMessage>()
+        val handler = PushHandler(fixture.repository, presenter(shown))
+        val message = PushMessage(TEST_APP_ID, UUID.randomUUID().toString(), "Title", "Body")
+        assertTrue(handler.accept(message))
+        assertFalse(handler.accept(message.copy(appId = "another-app")))
+        NotificationOpenTracker(fixture.repository, fixture.scheduler).opened(message.id)
+        assertTrue(shown.isEmpty())
+        assertTrue(
+            fixture.repository
+                .read()
+                .receivedMessages
+                .isEmpty(),
+        )
+        assertTrue(
+            fixture.repository
+                .read()
+                .pendingOpenedMessages
+                .isEmpty(),
+        )
+        assertEquals(0, fixture.scheduler.enqueued)
+    }
+
     @Test fun `message deduplication and pending opens are bounded and preserve newest entries`() {
         val fixture = CoreFixture()
         val handler = PushHandler(fixture.repository, presenter(mutableListOf()))

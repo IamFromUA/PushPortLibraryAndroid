@@ -1,6 +1,16 @@
 # Изменения SDK
 
-## 0.0.1 — кандидат первого публичного выпуска, 2026-09-13
+## 0.0.2 — 2026-09-16
+
+- Offer URL parameters and ID decoration are managed by the host application using the confirmed user ID.
+
+- Add automatic Android device-profile linking on backend V11: reinstallations with the same Android ID share a user while retaining independent installation IDs, credentials and token history.
+- Add foreground sessions, usage duration and carrier metadata.
+- Add consent gating, verified External ID login/logout and last confirmed user profiles.
+- Add durable tags, contact/location metadata and custom events with retry-safe operation revisions.
+- Preserve the existing public API; new methods and `PushPortUser` are additive. Requires the compatible user-profile backend; production runs backend V13.
+
+## 0.0.1 — первый публичный выпуск, 2026-09-13
 
 - Добавлена передача Android ID как необязательного поля `androidId`. Недоступные значения не мешают регистрации; прежние установки, их ID и публичный API сохранены.
 - Номер первого публичного выпуска установлен в `0.0.1`. Предыдущие номера ниже относятся к локальным сборкам, которые не публиковались в Maven Central.

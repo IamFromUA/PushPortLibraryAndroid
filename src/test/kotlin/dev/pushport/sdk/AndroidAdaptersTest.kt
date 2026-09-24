@@ -122,6 +122,72 @@ class AndroidAdaptersTest {
         }
     }
 
+    @Test fun `usage consent profile and nullable operation fields survive process storage roundtrip`() {
+        val codec = InstallationStateJson()
+        val state =
+            dev.pushport.sdk.internal.model.InstallationState(
+                config = PushPortConfig(TEST_APP_ID, "https://example.test"),
+                identity = TEST_IDENTITY,
+                usage =
+                    dev.pushport.sdk.internal.model
+                        .UsageSnapshot(1000, 3000, 2, 5000),
+                consentRequired = true,
+                consentGiven = true,
+                lastActivityAt = 4000,
+                user =
+                    PushPortUser(
+                        "server-user",
+                        "account-1",
+                        mapOf("tier" to "pro"),
+                        "person@example.test",
+                        "+49123456789",
+                        52.5,
+                        13.4,
+                        7,
+                    ),
+                nextUserRevision = 8,
+                pendingUserOperations =
+                    listOf(
+                        dev.pushport.sdk.internal.model.UserOperation(
+                            revision = 8,
+                            kind = "tags",
+                            tags =
+                                mapOf("tier" to null),
+                        ),
+                    ),
+            )
+        assertEquals(state, codec.decode(codec.encode(state)))
+        val waiting = state.copy(identity = null, user = null, consentGiven = false)
+        assertEquals(waiting, codec.decode(codec.encode(waiting)))
+    }
+
+    @Test fun `HTTP user wire roundtrip keeps profile and explicit property removals`() {
+        MockWebServer().use { server ->
+            val api = HttpInstallationApi(UrlConnectionTransport(PushPortConfig(TEST_APP_ID, server.url("/").toString(), true)))
+            val profile = """{"userId":"test-user","externalId":null,
+                    "properties":{"tags":{}},"revision":2}"""
+            server.enqueue(MockResponse().setBody("""{"user":$profile}"""))
+            assertEquals("test-user", api.registerAndReadUser(TEST_IDENTITY, testSnapshot())!!.userId)
+            server.takeRequest()
+            server.enqueue(MockResponse().setBody(profile))
+            val result =
+                api.updateUser(
+                    TEST_IDENTITY,
+                    dev.pushport.sdk.internal.model.UserOperation(
+                        revision = 2,
+                        kind = "tags",
+                        tags =
+                            mapOf("tier" to null),
+                    ),
+                )
+            assertEquals(2, result.revision)
+            val request = server.takeRequest()
+            assertTrue(request.path!!.endsWith("/user"))
+            assertEquals("Bearer ${TEST_IDENTITY.secret}", request.getHeader("Authorization"))
+            assertTrue(JSONObject(request.body.readUtf8()).getJSONObject("tags").isNull("tier"))
+        }
+    }
+
     @Test fun `oversized network responses are bounded`() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("x".repeat(65_537)))

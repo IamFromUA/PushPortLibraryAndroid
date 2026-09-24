@@ -5,6 +5,7 @@ package dev.pushport.sdk.internal.serialization
 
 import dev.pushport.sdk.internal.model.DeviceSnapshot
 import dev.pushport.sdk.internal.model.FirebaseConfiguration
+import dev.pushport.sdk.internal.model.UsageSnapshot
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -44,6 +45,8 @@ internal object WireJson {
             .put("manufacturer", value.manufacturer)
             .put("model", value.model)
             .put("androidId", value.androidId ?: JSONObject.NULL)
+            .put("carrier", value.carrier ?: JSONObject.NULL)
+            .put("usage", value.usage?.let(::usage) ?: JSONObject.NULL)
 
     fun snapshot(json: JSONObject): DeviceSnapshot =
         DeviceSnapshot(
@@ -65,6 +68,23 @@ internal object WireJson {
             manufacturer = json.getString("manufacturer"),
             model = json.getString("model"),
             androidId = json.stringOrNull("androidId"),
+            carrier = json.stringOrNull("carrier"),
+            usage = json.optJSONObject("usage")?.let(::usage),
+        )
+
+    fun usage(value: UsageSnapshot): JSONObject =
+        JSONObject()
+            .put("firstSessionAt", value.firstSessionAt ?: JSONObject.NULL)
+            .put("lastSessionAt", value.lastSessionAt ?: JSONObject.NULL)
+            .put("sessionCount", value.sessionCount)
+            .put("totalUsageMillis", value.totalUsageMillis)
+
+    fun usage(json: JSONObject): UsageSnapshot =
+        UsageSnapshot(
+            json.optLong("firstSessionAt").takeIf { it > 0 },
+            json.optLong("lastSessionAt").takeIf { it > 0 },
+            json.optLong("sessionCount"),
+            json.optLong("totalUsageMillis"),
         )
 }
 

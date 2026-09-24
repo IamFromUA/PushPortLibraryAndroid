@@ -12,6 +12,7 @@ import dev.pushport.sdk.PushPortConfig
 import dev.pushport.sdk.internal.core.InstallationController
 import dev.pushport.sdk.internal.core.NotificationOpenTracker
 import dev.pushport.sdk.internal.core.PushHandler
+import dev.pushport.sdk.internal.core.SessionTracker
 import dev.pushport.sdk.internal.core.SnapshotCollector
 import dev.pushport.sdk.internal.core.SyncCoordinator
 import dev.pushport.sdk.internal.core.TokenRefresher
@@ -43,6 +44,11 @@ internal class SdkRuntime private constructor(
     private val collector = SnapshotCollector(repository, AndroidDeviceInfoProvider(application, notifications))
     private val tokens = TokenRefresher(repository, FirebasePushTokenProvider(application))
     private val debuggable = application.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    private val sessions = SessionTracker(repository, System::currentTimeMillis, android.os.SystemClock::elapsedRealtime)
+
+    val users =
+        dev.pushport.sdk.internal.core
+            .UserController(repository, scheduler)
 
     val controller = InstallationController(repository, collector, scheduler, notifications, ::newIdentity, debuggable)
     val synchronizer =
@@ -65,16 +71,40 @@ internal class SdkRuntime private constructor(
                 controller.sync(locales)
             },
             onConfigurationChange = { controller.sync() },
+            onForeground = {
+                sessions.foreground()
+                controller.sync()
+            },
+            onBackground = {
+                sessions.background()
+                controller.sync()
+            },
+            onHeartbeat = {
+                sessions.checkpoint()
+                controller.sync()
+            },
         )
 
     @Synchronized
     fun initialize(config: PushPortConfig) {
         controller.initialize(config)
-        tokens.restore()
         presenter.createChannel()
         observer.register()
+        if (!repository.read().collectionAllowed) return
+        tokens.restore()
+        if (observer.isForeground) sessions.foreground()
         controller.sync()
         scheduler.schedulePeriodic()
+    }
+
+    @Synchronized
+    fun consent(
+        required: Boolean? = null,
+        given: Boolean? = null,
+    ) {
+        sessions.background()
+        repository.update { it.copy(consentRequired = required ?: it.consentRequired, consentGiven = given ?: it.consentGiven) }
+        repository.read().config?.let(::initialize)
     }
 
     fun restore(): Boolean {
@@ -84,6 +114,7 @@ internal class SdkRuntime private constructor(
     }
 
     fun handleNotificationIntent(intent: Intent?) {
+        if (!repository.read().collectionAllowed) return
         val messageId = intent?.getStringExtra(PushProtocol.MESSAGE_ID) ?: return
         if (!isCanonicalUuid(messageId)) return
         intent.removeExtra(PushProtocol.MESSAGE_ID)
@@ -98,7 +129,7 @@ internal class SdkRuntime private constructor(
         messageId: String,
     ): Boolean {
         val state = repository.read()
-        return state.config?.appId == appId && state.subscribed && messageId in state.receivedMessages &&
+        return state.collectionAllowed && state.config?.appId == appId && state.subscribed && messageId in state.receivedMessages &&
             messageId !in state.pendingOpenedMessages && notifications.isEnabled() && presenter.isVisible(messageId)
     }
 

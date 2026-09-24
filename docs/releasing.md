@@ -2,7 +2,7 @@
 
 ## Current state
 
-The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Version `0.0.1` is published on Maven Central; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
+The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Version `0.0.2` is published on Maven Central; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
 
 Publisher setup completed on 2026-09-13:
 
@@ -10,9 +10,9 @@ Publisher setup completed on 2026-09-13:
 - The owner selected Apache License 2.0 for the SDK. Copyright holder and publisher: Oleh Yurkov; project name: PushPort; public contact: `support@pushport.dev`.
 - The POM declares license, developer, SCM and issue tracker metadata. Canonical `LICENSE` and `NOTICE` files are included in all published code/documentation archives. See [licensing](licensing.md).
 
-Version `0.0.1` is available as `dev.pushport:android-sdk:0.0.1` from the public Maven Central repository. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
+Version `0.0.2` is available as `dev.pushport:android-sdk:0.0.2` from the public Maven Central repository. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
 
-This candidate sends optional `androidId` metadata. Deploy the compatible backend before releasing the SDK; it accepts missing/null values from older clients and stores the field in the installation snapshot.
+Version `0.0.2` adds confirmed user profiles, verified account linking, optional user properties/events, foreground sessions and optional consent controls. Backend V13 is deployed at `https://pushport.dev`; existing `0.0.1` clients remain supported. Offer URL parameters and ID formatting belong to the host application.
 
 ## Prepare a candidate
 
@@ -44,7 +44,7 @@ References: [Central requirements](https://central.sonatype.org/publish/requirem
 
 ## GitHub publication environment
 
-The manual `publish.yml` workflow checks the immutable tag against the build version and reruns package/consumer verification. In the **maven-central** environment set `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (the Portal User Token pair), `SIGNING_KEY` (armored private PGP key), `SIGNING_KEY_ID` (last eight hex digits), and `SIGNING_PASSWORD`. Only the public PGP key goes to a keyserver. The workflow signs in memory and invokes `publishAndReleaseToMavenCentral`. Ordinary pushes only verify. Public registry availability must be checked before announcing the Maven coordinate as released.
+The manual `publish.yml` workflow checks the immutable tag against the build version and reruns package/consumer verification. In the **maven-central** environment set `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD` (the Portal User Token pair), `SIGNING_KEY` (armored private PGP key), `SIGNING_KEY_ID` (last eight hex digits), and `SIGNING_PASSWORD`. Only the public PGP key goes to a keyserver. The workflow signs in memory, invokes `publishAndReleaseToMavenCentral`, waits for the public artifact on Maven Central, then creates a GitHub Release for the same tag and marks it Latest. Ordinary pushes only verify. If the workflow fails after Maven Central publication, create the matching GitHub Release from the existing immutable tag without republishing the Maven version.
 
 ## Publisher policy
 

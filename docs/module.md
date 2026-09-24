@@ -10,7 +10,7 @@ Initialize `PushPort` from the host application's `Application.onCreate` with th
 
 ## Release status
 
-Version 0.0.1 is published on Maven Central as `dev.pushport:android-sdk:0.0.1`. Consult the source distribution's README and compatibility guide before integrating or upgrading.
+Version 0.0.2 is published on Maven Central as `dev.pushport:android-sdk:0.0.2`. Consult the source distribution's README and compatibility guide before integrating or upgrading.
 
 ## License and publisher
 

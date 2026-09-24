@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.res.Resources
 import android.os.Build
 import android.provider.Settings
+import android.telephony.TelephonyManager
 import dev.pushport.sdk.BuildConfig
 import dev.pushport.sdk.internal.model.DeviceSnapshot
 import dev.pushport.sdk.internal.ports.DeviceInfoProvider
@@ -76,8 +77,23 @@ internal class AndroidDeviceInfoProvider(
             manufacturer = Build.MANUFACTURER.take(100),
             model = Build.MODEL.take(100),
             androidId = androidId(),
+            carrier = carrier(),
         )
     }
+
+    private fun carrier(): String? =
+        try {
+            context
+                .getSystemService(TelephonyManager::class.java)
+                ?.networkOperatorName
+                ?.trim()
+                ?.take(100)
+                ?.takeIf(String::isNotBlank)
+        } catch (_: SecurityException) {
+            null
+        } catch (_: UnsupportedOperationException) {
+            null
+        }
 
     // App-signing-key/user/device-scoped metadata; never used as the installation identity.
     @SuppressLint("HardwareIds")

@@ -28,5 +28,5 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
-    implementation("dev.pushport:android-sdk:0.0.1")
+    implementation("dev.pushport:android-sdk:0.0.2")
 }

@@ -10,6 +10,8 @@ final class JavaIntegration {
     static void verify(Context context) {
         PushPortConfig settings = new PushPortConfig(
                 "11111111-1111-4111-8111-111111111111", "https://example.test");
+        dev.pushport.sdk.PushPortUser user = PushPort.user(context);
+        if (user != null && user.getUserId().isEmpty()) throw new IllegalStateException("Missing user ID");
         PushPortStatus status = PushPort.status(context);
         if (settings.getAllowInsecureLocalhost() || status.getConfigured()) {
             throw new IllegalStateException("Unexpected fixture state");

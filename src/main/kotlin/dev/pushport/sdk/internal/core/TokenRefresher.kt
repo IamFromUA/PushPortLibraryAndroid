@@ -18,6 +18,7 @@ internal class TokenRefresher(
     private val timeoutMillis: Long = 20_000,
 ) {
     fun restore() {
+        if (!repository.read().collectionAllowed) return
         val configuration = repository.read().firebase ?: return
         try {
             provider.restore(configuration)
@@ -27,6 +28,7 @@ internal class TokenRefresher(
     }
 
     suspend fun refresh(configuration: FirebaseConfiguration?): TokenRefreshOutcome {
+        if (!repository.read().collectionAllowed) return TokenRefreshOutcome.NOT_CONFIGURED
         if (configuration == null) {
             repository.update { it.copy(firebase = null, fcmToken = null, pushError = NOT_CONFIGURED) }
             return TokenRefreshOutcome.NOT_CONFIGURED
@@ -40,6 +42,7 @@ internal class TokenRefresher(
                 repository.update { it.copy(pushError = TEMPORARILY_UNAVAILABLE) }
                 return TokenRefreshOutcome.RETRY
             }
+            if (!repository.read().collectionAllowed) return TokenRefreshOutcome.NOT_CONFIGURED
             require(token.isNotBlank()) { "Empty Firebase token" }
             repository.update { it.copy(fcmToken = token, pushError = null) }
             return TokenRefreshOutcome.READY

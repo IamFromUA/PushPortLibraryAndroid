@@ -22,4 +22,4 @@ Opening analytics indicate a notification tap reported by this installation. FCM
 
 ## Upgrade
 
-Use `dev.pushport:android-sdk:0.0.1` for the first public release candidate. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with those local PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.
+Use `dev.pushport:android-sdk:0.0.2` for the current release. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with those local PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.

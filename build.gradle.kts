@@ -33,7 +33,7 @@ androidComponents.onVariants { variant ->
 }
 
 group = providers.gradleProperty("pushport.group").getOrElse("dev.pushport")
-version = "0.0.1"
+version = "0.0.2"
 val serviceUrl = providers.gradleProperty("pushport.serverUrl").getOrElse("https://pushport.dev").trimEnd('/')
 require(
     serviceUrl.isEmpty() ||

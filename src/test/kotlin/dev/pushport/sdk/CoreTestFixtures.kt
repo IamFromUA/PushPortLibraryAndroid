@@ -66,6 +66,13 @@ internal class RecordingApi : InstallationApi {
     var failure: Exception? = null
     val registrations = mutableListOf<DeviceSnapshot>()
     val openedMessages = mutableListOf<String>()
+    var onUser: (dev.pushport.sdk.internal.model.UserOperation) -> PushPortUser = { error("Unexpected user operation") }
+
+    override fun updateUser(
+        identity: InstallationIdentity,
+        operation: dev.pushport.sdk.internal.model.UserOperation,
+    ): PushPortUser = onUser(operation)
+
     var onRegister: (DeviceSnapshot) -> Unit = {}
     var onOpened: (String) -> Unit = {}
 

@@ -19,6 +19,8 @@ Architecture tests inspect compiled bytecode to prevent Android/Firebase/JSON/ad
 ## Responsibilities
 
 - `InstallationController` validates initialization and changes user preferences.
+- `SessionTracker` measures foreground visits and duration with an injectable monotonic clock.
+- `UserController` validates optional data and maintains the bounded account-aware operation queue.
 - `SnapshotCollector` gathers metadata through a port and increments the revision only when values change.
 - `SyncCoordinator` serializes network synchronization, acknowledges only uploaded revisions, drains opened events, and decides whether work should retry.
 - `TokenRefresher` distinguishes ready, unconfigured, invalid, and temporarily unavailable FCM state. Metadata can still register when FCM is unavailable.
@@ -36,7 +38,7 @@ Use concrete internal collaborators when there is no replaceable boundary. Do no
 
 ## Extending the SDK
 
-For a feature such as tags, external user IDs, or notification customization:
+For an additional feature such as notification customization:
 
 1. Specify the public contract and server protocol before adding API surface.
 2. Put state and invariants in typed models/core services.
@@ -55,3 +57,5 @@ Split a package into a Gradle module when an independently testable or distribut
 - [OneSignal Android SDK](https://github.com/OneSignal/OneSignal-Android-SDK): separate integration, contribution, migration and example documentation. Its size does not determine this SDK's module count.
 
 The implementation and documentation are original; reference projects inform conventions rather than provide copied SDK code.
+
+See [partner tracking links](partner-integration.md) for application-side URL construction using the confirmed user ID.
