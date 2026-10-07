@@ -7,7 +7,7 @@ The SDK displays the text immediately. An independent WorkManager job downloads 
 ## Image contract
 
 - Public HTTPS hostname, port 443, URL at most 1,000 characters, no embedded credentials.
-- PNG, JPEG or WebP; image content type; at most 1 MiB downloaded.
+- PNG, JPEG or WebP; image content type. SDK 0.0.3 defaults to 5 MiB downloaded; the application owner can set 1–20 MiB in dashboard settings. Values are fetched and cached automatically. SDK 0.0.2 and older retain 1 MiB.
 - Decoded bounds at most 4,096 pixels per side and 8 million total pixels; sampled to at most 1,024 pixels per side.
 - Connect/read timeout 5 seconds and total call timeout 10 seconds. No redirects, automatic HTTP retry, cookies or proxy.
 - DNS answers must resolve to public addresses. The HTTP client uses those checked answers for its connection.
@@ -22,4 +22,4 @@ Opening analytics indicate a notification tap reported by this installation. FCM
 
 ## Upgrade
 
-Use `dev.pushport:android-sdk:0.0.2` for the current release. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with those local PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.
+Use `dev.pushport:android-sdk:0.0.3` for the current release. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with those local PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.

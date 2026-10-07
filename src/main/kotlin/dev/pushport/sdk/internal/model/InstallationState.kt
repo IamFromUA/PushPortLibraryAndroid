@@ -75,6 +75,14 @@ internal data class InstallationState(
     val pendingUserOperations: List<UserOperation> = emptyList(),
     val consentRequired: Boolean = false,
     val consentGiven: Boolean = false,
+    val pendingTelemetry: List<TelemetryEvent> = emptyList(),
+    val telemetryEnabled: Boolean = false,
+    val telemetryDropped: Long = 0,
+    val imageLimitBytes: Int = DEFAULT_IMAGE_BYTES,
+    val lastReceivedMessageId: String? = null,
+    val lastReceivedAt: Long = 0,
+    val lastClickedMessageId: String? = null,
+    val lastClickedAt: Long = 0,
 ) {
     val collectionAllowed: Boolean get() = !consentRequired || consentGiven
 

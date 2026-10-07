@@ -12,6 +12,7 @@ import dev.pushport.sdk.internal.ports.SyncScheduler
 internal class NotificationOpenTracker(
     private val repository: InstallationRepository,
     private val scheduler: SyncScheduler,
+    private val telemetry: TelemetryTracker? = null,
 ) {
     fun opened(messageId: String) {
         if (!isCanonicalUuid(messageId) || repository.read().config == null || !repository.read().collectionAllowed) return
@@ -25,5 +26,6 @@ internal class NotificationOpenTracker(
             }
         }
         scheduler.enqueue()
+        telemetry?.record("clicked", messageId)
     }
 }

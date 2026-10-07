@@ -54,6 +54,26 @@ internal class InstallationStateJson {
                     }.orEmpty(),
             consentRequired = json.optBoolean("consentRequired"),
             consentGiven = json.optBoolean("consentGiven"),
+            pendingTelemetry =
+                json
+                    .optJSONArray("telemetry")
+                    ?.let { array ->
+                        (0 until array.length())
+                            .map {
+                                dev.pushport.sdk.internal.serialization.TelemetryJson
+                                    .decode(array.getJSONObject(it))
+                            }.takeLast(dev.pushport.sdk.internal.model.MAX_TELEMETRY_EVENTS)
+                    }.orEmpty(),
+            telemetryEnabled = json.optBoolean("telemetryEnabled"),
+            telemetryDropped = json.optLong("telemetryDropped"),
+            lastReceivedMessageId = json.stringOrNull("lastReceivedMessageId"),
+            lastReceivedAt = json.optLong("lastReceivedAt"),
+            lastClickedMessageId = json.stringOrNull("lastClickedMessageId"),
+            lastClickedAt = json.optLong("lastClickedAt"),
+            imageLimitBytes =
+                json
+                    .optInt("imageLimitBytes", dev.pushport.sdk.internal.model.DEFAULT_IMAGE_BYTES)
+                    .coerceIn(1024 * 1024, dev.pushport.sdk.internal.model.MAX_IMAGE_BYTES),
         )
     }
 
@@ -81,6 +101,14 @@ internal class InstallationStateJson {
                 .put("userOperations", JSONArray(state.pendingUserOperations.map(UserJson::operation)))
                 .put("consentRequired", state.consentRequired)
                 .put("consentGiven", state.consentGiven)
+                .put("telemetry", JSONArray(state.pendingTelemetry.map(dev.pushport.sdk.internal.serialization.TelemetryJson::encode)))
+                .put("telemetryEnabled", state.telemetryEnabled)
+                .put("telemetryDropped", state.telemetryDropped)
+                .put("imageLimitBytes", state.imageLimitBytes)
+                .put("lastReceivedMessageId", state.lastReceivedMessageId)
+                .put("lastReceivedAt", state.lastReceivedAt)
+                .put("lastClickedMessageId", state.lastClickedMessageId)
+                .put("lastClickedAt", state.lastClickedAt)
         state.identity?.let { json.put("installationId", it.id).put("secret", it.secret) }
         state.config?.let {
             json.put(

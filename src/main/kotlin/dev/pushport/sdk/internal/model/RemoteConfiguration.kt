@@ -5,4 +5,6 @@ package dev.pushport.sdk.internal.model
 
 internal data class RemoteConfiguration(
     val firebase: FirebaseConfiguration?,
+    val imageLimitBytes: Int = DEFAULT_IMAGE_BYTES,
+    val telemetryVersion: Int = 0,
 )

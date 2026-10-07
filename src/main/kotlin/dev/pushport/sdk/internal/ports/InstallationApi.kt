@@ -9,6 +9,12 @@ import dev.pushport.sdk.internal.model.FirebaseConfiguration
 import dev.pushport.sdk.internal.model.InstallationIdentity
 
 internal interface InstallationApi {
+    fun telemetry(
+        identity: InstallationIdentity,
+        events: List<dev.pushport.sdk.internal.model.TelemetryEvent>,
+        dropped: Long,
+    ): List<String> = emptyList()
+
     fun configuration(packageName: String): FirebaseConfiguration?
 
     fun settings(packageName: String): dev.pushport.sdk.internal.model.RemoteConfiguration =

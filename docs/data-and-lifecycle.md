@@ -1,13 +1,13 @@
 # Data and lifecycle
 
-The user/session/consent additions below are unreleased; see [data and users](data-and-users.md) for version availability and integration.
+User/session/consent controls are available since 0.0.2; notification diagnostics are available since 0.0.3. See [data and users](data-and-users.md) for integration.
 
 ## Data handled by the SDK
 
 | Data | Purpose |
 | --- | --- |
 | Random installation UUID and generated installation secret | Identify and authenticate this app installation |
-| Android ID (`Settings.Secure.ANDROID_ID`), when available | Device metadata; backend V11 links device profiles within an app using this value, while installation UUIDs remain separate |
+| Android ID (`Settings.Secure.ANDROID_ID`), when available | Optional device metadata; it does not replace the random installation identity |
 | FCM token | Address push messages to the device |
 | Package, app version, SDK version | Bind registration to the correct application and diagnose compatibility |
 | Effective language/locale, ordered locale lists, timezone | Language targeting and scheduling inputs |
@@ -16,6 +16,7 @@ The user/session/consent additions below are unreleased; see [data and users](da
 | Carrier, foreground sessions and duration | Activity metrics distinct from background sync |
 | Linked user ID and explicitly provided External ID/tags/contact/location/events | Optional app-owned user model; see [data and users](data-and-users.md) |
 | Message IDs and opened events | Deduplication and acknowledgement |
+| Notification receipt, Android posting, image outcomes, clicks, link-launch outcomes and bounded sync failure reasons | Delivery diagnostics; no image contents, destination URL, notification text or exception stack is uploaded in these events |
 
 The SDK does not request location permission, read GPS, Advertising ID, IMEI or contacts. A country subtag in a locale is a language preference, not a verified physical country. No IP-based geolocation is implemented in the SDK.
 
@@ -23,7 +24,7 @@ Android ID is read after initialization and sent as the optional `androidId` reg
 
 The local snapshot stores this value alongside the other metadata and detects changes during synchronization. Existing stored snapshots without `androidId` remain readable and keep their installation identity. Diagnostic string representations omit its value. Android ID collection belongs in the integrating application's description of the data collected by this SDK.
 
-With backend V11, the first registration uses a valid Android ID to link the device profile within the same PushPort app. Reinstalling normally keeps one user with two distinct installations. Android ID never replaces the installation UUID or secret, and explicit account login remains separate. See [default identity and fallback behavior](data-and-users.md#default-android-behavior--no-extra-integration-calls).
+The current backend creates a separate default user for each installation. Reinstalling or clearing app data creates a fresh installation identity; restarting or updating the app preserves it. Android ID never replaces the installation UUID or secret, and explicit account login remains separate.
 
 Data starts being registered after explicit initialization, subject to the configured consent gate. `setSubscribed(false)` suppresses new PushPort notification presentation; it is not a data-deletion or collection-consent API. Call `setConsentRequired` before initialization and `setConsentGiven` from the host consent flow. Server-side deletion remains separate; revoking consent does not erase stored history.
 
@@ -39,7 +40,7 @@ Unknown future schemas and invalid storage are not silently overwritten. A migra
 
 WorkManager enforces network connectivity, schedules periodic work at a 15-minute minimum interval, and applies OS scheduling limits. The interval is not an exact timer or delivery guarantee. Foreground resumes and environment changes also schedule refreshes.
 
-The coordinator gets Firebase options, refreshes the token, captures the latest snapshot, registers changed data, then sends queued opened events and user operations. Unchanged registration is refreshed after a 12-hour heartbeat. A successful request acknowledges only the revision it actually sent; changes made during the request remain pending.
+The coordinator gets Firebase options and optional image settings, refreshes the token, captures the latest snapshot, registers changed data, then sends queued opened events, user operations and notification telemetry when the backend advertises support. Unchanged registration is refreshed after a 12-hour heartbeat. A successful request acknowledges only the revision it actually sent; changes made during the request remain pending.
 
 Transient HTTP/I/O failures retry with exponential backoff. FCM timeout/temporary failure also requests a bounded retry while allowing metadata registration and opened-event uploads. A cached token is retained only while the Firebase configuration is unchanged. Invalid Firebase settings stop the current work with a diagnostic; explicit `firebase: null` means the server has disconnected Firebase. A malformed configuration response is not treated as a disconnect.
 
@@ -52,6 +53,8 @@ Only messages with a matching PushPort app ID and a canonical message UUID are a
 The default channel ID is `pushport_default`. Android permission and the local subscription preference both control presentation. Notification clicks use an internal, non-exported activity to queue an opened event and launch the host application. Up to 100 pending opened IDs are retained and removed individually after server acknowledgement.
 
 There is no exactly-once delivery guarantee. Network loss after server acceptance can cause an event to be resent; the server must handle duplicate message events idempotently.
+
+Version 0.0.3 stores up to 1,000 diagnostic events in a private persistent outbox and uses stable event IDs for retry deduplication. Collection respects the existing consent controls; revocation clears pending telemetry. Read [notification reports](notification-reports.md) for event meanings, limits and attribution windows. Android posting does not prove a user saw the notification; link launch does not prove a website loaded.
 
 ## Diagnostics
 

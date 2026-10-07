@@ -36,9 +36,24 @@ internal class SyncCoordinator(
                 val api = apiFactory.create(config.validate(debuggable))
                 val preliminary = collector.capture() ?: return@withLock SyncOutcome.SUCCESS
                 val remote = api.settings(preliminary.packageName)
+                repository.update { it.copy(imageLimitBytes = remote.imageLimitBytes, telemetryEnabled = remote.telemetryVersion >= 1) }
                 val firebase = remote.firebase
                 if (!repository.read().collectionAllowed) return@withLock SyncOutcome.SUCCESS
                 val tokenOutcome = tokens.refresh(firebase)
+                if (tokenOutcome in setOf(TokenRefreshOutcome.RETRY, TokenRefreshOutcome.INVALID_CONFIGURATION)) {
+                    TelemetryTracker(repository, scheduler, clock::nowMillis).record(
+                        "sync_failed",
+                        reason =
+                            if (tokenOutcome ==
+                                TokenRefreshOutcome.RETRY
+                            ) {
+                                "token_unavailable"
+                            } else {
+                                "invalid_configuration"
+                            },
+                        schedule = false,
+                    )
+                }
                 if (!repository.read().collectionAllowed) return@withLock SyncOutcome.SUCCESS
                 val snapshot = collector.capture() ?: return@withLock SyncOutcome.SUCCESS
                 val state = repository.read()
@@ -97,15 +112,30 @@ internal class SyncCoordinator(
                     }
                 }
                 repository.update { it.copy(syncError = null) }
+                val telemetryRetry = flushTelemetry(api, identity)
                 if (repository.read().revision != snapshot.revision ||
                     repository.read().pendingUserOperations.isNotEmpty()
                 ) {
                     scheduler.enqueue()
                 }
                 when (tokenOutcome) {
-                    TokenRefreshOutcome.RETRY -> retryOrFail(attempt)
-                    TokenRefreshOutcome.INVALID_CONFIGURATION -> SyncOutcome.FAILURE
-                    TokenRefreshOutcome.READY, TokenRefreshOutcome.NOT_CONFIGURED -> SyncOutcome.SUCCESS
+                    TokenRefreshOutcome.RETRY -> {
+                        retryOrFail(attempt)
+                    }
+
+                    TokenRefreshOutcome.INVALID_CONFIGURATION -> {
+                        SyncOutcome.FAILURE
+                    }
+
+                    TokenRefreshOutcome.READY, TokenRefreshOutcome.NOT_CONFIGURED -> {
+                        if (telemetryRetry) {
+                            retryOrFail(
+                                attempt,
+                            )
+                        } else {
+                            SyncOutcome.SUCCESS
+                        }
+                    }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -117,10 +147,47 @@ internal class SyncCoordinator(
                         else -> "Ошибка конфигурации или ответа сервера (${error.javaClass.simpleName})"
                     }
                 repository.update { it.copy(syncError = message) }
+                TelemetryTracker(repository, scheduler, clock::nowMillis).record(
+                    "sync_failed",
+                    schedule = false,
+                    reason =
+                        when (error) {
+                            is HttpFailure -> "http_${error.status}"
+                            is IOException -> "network_unavailable"
+                            else -> "invalid_configuration"
+                        },
+                )
                 val retryable = error is IOException || (error is HttpFailure && error.retryable)
                 if (retryable) retryOrFail(attempt) else SyncOutcome.FAILURE
             }
         }
+
+    private fun flushTelemetry(
+        api: dev.pushport.sdk.internal.ports.InstallationApi,
+        identity: dev.pushport.sdk.internal.model.InstallationIdentity,
+    ): Boolean {
+        return try {
+            repeat(10) {
+                val state = repository.read()
+                if (!state.telemetryEnabled || !state.collectionAllowed || state.pendingTelemetry.isEmpty()) return false
+                val batch = state.pendingTelemetry.take(100)
+                val accepted = api.telemetry(identity, batch, state.telemetryDropped).toSet().intersect(batch.map { it.id }.toSet())
+                repository.update { it.copy(pendingTelemetry = it.pendingTelemetry.filterNot { event -> event.id in accepted }) }
+                if (accepted.isEmpty()) return true
+            }
+            repository.read().pendingTelemetry.isNotEmpty()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            // Diagnostics must never prevent device registration, identity updates or legacy click reporting.
+            if (error is HttpFailure && error.status in setOf(404, 405)) {
+                repository.update { it.copy(telemetryEnabled = false) }
+                false
+            } else {
+                error is IOException || (error is HttpFailure && error.retryable)
+            }
+        }
+    }
 
     private fun retryOrFail(attempt: Int): SyncOutcome = if (attempt < MAX_RETRIES) SyncOutcome.RETRY else SyncOutcome.FAILURE
 

@@ -6,7 +6,7 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Version 0.0.2 is published on Maven Central** as `dev.pushport:android-sdk:0.0.2`. The SDK is licensed under [Apache License 2.0](LICENSE).
+**Version 0.0.3 is published on Maven Central** as `dev.pushport:android-sdk:0.0.3`. The SDK is licensed under [Apache License 2.0](LICENSE).
 
 ## Integration
 
@@ -15,7 +15,7 @@ PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 
    ```kotlin
    dependencies {
-       implementation("dev.pushport:android-sdk:0.0.2")
+       implementation("dev.pushport:android-sdk:0.0.3")
    }
    ```
 
@@ -35,6 +35,7 @@ Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are 
 | [API reference](docs/api.md) | Public contracts and generated Dokka reference |
 | [Architecture](docs/architecture.md) | Responsibilities, dependency rules, extension points |
 | [Notification images and links](docs/rich-notifications.md) | Image limits, click behavior, network access |
+| [Delivery diagnostics](docs/notification-reports.md) | Device receipt, image outcomes, click timestamps and estimated returns |
 | [Data and lifecycle](docs/data-and-lifecycle.md) | Collected data, synchronization, retries, storage |
 | [Compatibility](docs/compatibility.md) | API baseline, persistent components, versioning |
 | [Data and users](docs/data-and-users.md) | Collected fields, sessions, consent and verified External ID (unreleased) |

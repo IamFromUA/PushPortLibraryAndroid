@@ -23,6 +23,10 @@ internal class HttpInstallationApi(
         require(document.has("firebase")) { "Missing Firebase configuration field" }
         return dev.pushport.sdk.internal.model.RemoteConfiguration(
             if (document.isNull("firebase")) null else WireJson.firebase(document.getJSONObject("firebase")),
+            document
+                .optInt("imageLimitBytes", dev.pushport.sdk.internal.model.DEFAULT_IMAGE_BYTES)
+                .coerceIn(1024 * 1024, dev.pushport.sdk.internal.model.MAX_IMAGE_BYTES),
+            document.optInt("telemetryVersion", 0),
         )
     }
 
@@ -66,5 +70,18 @@ internal class HttpInstallationApi(
     ) {
         val body = JSONObject().put("messageId", messageId).put("type", "opened").toString()
         transport.request("POST", "/installations/${identity.id}/events", identity.secret, body)
+    }
+
+    override fun telemetry(
+        identity: InstallationIdentity,
+        events: List<dev.pushport.sdk.internal.model.TelemetryEvent>,
+        dropped: Long,
+    ): List<String> {
+        val body =
+            JSONObject()
+                .put("events", org.json.JSONArray(events.map(dev.pushport.sdk.internal.serialization.TelemetryJson::encode)))
+                .put("dropped", dropped)
+        val response = JSONObject(transport.request("POST", "/installations/${identity.id}/telemetry", identity.secret, body.toString()))
+        return response.getJSONArray("acceptedIds").let { array -> (0 until array.length()).map(array::getString) }
     }
 }

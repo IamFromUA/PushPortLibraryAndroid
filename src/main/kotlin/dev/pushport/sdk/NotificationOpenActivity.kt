@@ -25,6 +25,10 @@ public class NotificationOpenActivity : Activity() {
     }
 
     private fun open(intent: Intent) {
+        val messageId = intent.getStringExtra(dev.pushport.sdk.internal.model.PushProtocol.MESSAGE_ID)
+        val runtime =
+            dev.pushport.sdk.internal.runtime.SdkRuntime
+                .from(this)
         PushPort.handleNotificationIntent(this, intent)
         val url =
             dev.pushport.sdk.internal.model.publicHttpsUrl(
@@ -33,10 +37,13 @@ public class NotificationOpenActivity : Activity() {
         if (url != null) {
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE))
+                runtime.linkResult(messageId, true)
                 finish()
                 return
             } catch (_: android.content.ActivityNotFoundException) {
-                // Fall back to the host application.
+                runtime.linkResult(messageId, false)
+            } catch (_: SecurityException) {
+                runtime.linkResult(messageId, false)
             }
         }
         packageManager.getLaunchIntentForPackage(packageName)?.let {

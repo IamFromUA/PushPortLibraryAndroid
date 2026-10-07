@@ -4,7 +4,7 @@ This is a direction for future work, not a promise that these capabilities are i
 
 ## Release follow-up
 
-- Improve release automation and compatibility coverage. Signed version 0.0.2 is published on Maven Central; see [release process](releasing.md).
+- Improve release automation and compatibility coverage. Signed version 0.0.3 is published on Maven Central; see [release process](releasing.md).
 - Stable HTTPS backend endpoint and a clean consumer integration test.
 - Broader consumer compatibility coverage in the standalone repository and CI workflow.
 - A documented consumer toolchain/device compatibility matrix.

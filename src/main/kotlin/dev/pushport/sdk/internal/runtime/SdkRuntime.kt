@@ -15,6 +15,7 @@ import dev.pushport.sdk.internal.core.PushHandler
 import dev.pushport.sdk.internal.core.SessionTracker
 import dev.pushport.sdk.internal.core.SnapshotCollector
 import dev.pushport.sdk.internal.core.SyncCoordinator
+import dev.pushport.sdk.internal.core.TelemetryTracker
 import dev.pushport.sdk.internal.core.TokenRefresher
 import dev.pushport.sdk.internal.firebase.FirebasePushTokenProvider
 import dev.pushport.sdk.internal.model.InstallationIdentity
@@ -39,12 +40,13 @@ internal class SdkRuntime private constructor(
 ) {
     private val repository = AtomicInstallationRepository(application)
     private val notifications = AndroidNotificationState(application)
-    private val presenter = AndroidNotificationPresenter(application, notifications)
     private val scheduler = WorkManagerSyncScheduler(application)
+    private val telemetry = TelemetryTracker(repository, scheduler)
+    private val presenter = AndroidNotificationPresenter(application, notifications, telemetry)
     private val collector = SnapshotCollector(repository, AndroidDeviceInfoProvider(application, notifications))
     private val tokens = TokenRefresher(repository, FirebasePushTokenProvider(application))
     private val debuggable = application.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-    private val sessions = SessionTracker(repository, System::currentTimeMillis, android.os.SystemClock::elapsedRealtime)
+    private val sessions = SessionTracker(repository, System::currentTimeMillis, android.os.SystemClock::elapsedRealtime, telemetry)
 
     val users =
         dev.pushport.sdk.internal.core
@@ -61,8 +63,8 @@ internal class SdkRuntime private constructor(
             Clock(System::currentTimeMillis),
             debuggable,
         )
-    val pushHandler = PushHandler(repository, presenter)
-    private val openTracker = NotificationOpenTracker(repository, scheduler)
+    val pushHandler = PushHandler(repository, presenter, telemetry)
+    private val openTracker = NotificationOpenTracker(repository, scheduler, telemetry)
     private val observer =
         ApplicationObserver(
             application,
@@ -103,7 +105,18 @@ internal class SdkRuntime private constructor(
         given: Boolean? = null,
     ) {
         sessions.background()
-        repository.update { it.copy(consentRequired = required ?: it.consentRequired, consentGiven = given ?: it.consentGiven) }
+        repository.update {
+            val next = it.copy(consentRequired = required ?: it.consentRequired, consentGiven = given ?: it.consentGiven)
+            if (next.collectionAllowed) {
+                next
+            } else {
+                next.copy(
+                    pendingTelemetry = emptyList(),
+                    lastReceivedMessageId = null,
+                    lastClickedMessageId = null,
+                )
+            }
+        }
         repository.read().config?.let(::initialize)
     }
 
@@ -138,7 +151,42 @@ internal class SdkRuntime private constructor(
         messageId: String,
         image: android.graphics.Bitmap,
     ) {
-        if (canEnrichNotification(appId, messageId)) presenter.enrich(messageId, image)
+        if (canEnrichNotification(appId, messageId)) {
+            presenter.enrich(messageId, image)
+        } else {
+            telemetry.record("image_skipped", messageId, "notification_unavailable")
+        }
+    }
+
+    fun imageLimitBytes(): Int = repository.read().imageLimitBytes
+
+    fun imageResult(
+        messageId: String,
+        result: dev.pushport.sdk.internal.network.NotificationImageResult,
+    ) {
+        telemetry.record(
+            if (result.bitmap != null) "image_downloaded" else "image_failed",
+            messageId,
+            result.reason,
+            result.durationMillis,
+            result.sizeBytes,
+            result.httpStatus,
+        )
+    }
+
+    fun imageSkipped(messageId: String) = telemetry.record("image_skipped", messageId, "notification_unavailable")
+
+    fun linkResult(
+        messageId: String?,
+        success: Boolean,
+    ) {
+        if (messageId != null && isCanonicalUuid(messageId)) {
+            telemetry.record(
+                if (success) "link_opened" else "link_failed",
+                messageId,
+                if (success) null else "no_handler",
+            )
+        }
     }
 
     private fun newIdentity(): InstallationIdentity {

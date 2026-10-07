@@ -2,7 +2,7 @@
 
 ## Current state
 
-The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Version `0.0.2` is published on Maven Central; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
+The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. Version `0.0.3` is published on Maven Central; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
 
 Publisher setup completed on 2026-09-13:
 
@@ -10,9 +10,9 @@ Publisher setup completed on 2026-09-13:
 - The owner selected Apache License 2.0 for the SDK. Copyright holder and publisher: Oleh Yurkov; project name: PushPort; public contact: `support@pushport.dev`.
 - The POM declares license, developer, SCM and issue tracker metadata. Canonical `LICENSE` and `NOTICE` files are included in all published code/documentation archives. See [licensing](licensing.md).
 
-Version `0.0.2` is available as `dev.pushport:android-sdk:0.0.2` from the public Maven Central repository. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
+Version `0.0.3` is available as `dev.pushport:android-sdk:0.0.3` from the public Maven Central repository. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
 
-Version `0.0.2` adds confirmed user profiles, verified account linking, optional user properties/events, foreground sessions and optional consent controls. Backend V13 is deployed at `https://pushport.dev`; existing `0.0.1` clients remain supported. Offer URL parameters and ID formatting belong to the host application.
+Version `0.0.2` added confirmed user profiles, verified account linking, optional user properties/events, foreground sessions and optional consent controls. Version `0.0.3` adds notification diagnostics and a configurable image limit with a 5 MiB default. Deploy the additive telemetry backend migration before releasing 0.0.3; existing 0.0.1 and 0.0.2 clients remain supported. Offer URL parameters and ID formatting belong to the host application.
 
 ## Prepare a candidate
 

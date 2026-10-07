@@ -1,5 +1,13 @@
 # Изменения SDK
 
+## 0.0.3 — 2026-10-07
+
+- Notification images default to 5 MiB. Each application's dashboard can optionally change the limit to 1–20 MiB; the SDK caches server settings.
+- Durable, consent-aware notification diagnostics: received, notification posted or suppressed, image downloaded/attached/failed, click timestamps and external-link launch outcome.
+- Session timelines distinguish direct returns (within 60 seconds of a click) and estimated influenced returns (within 1 hour of receipt without a click).
+- Batched diagnostics retry after connectivity returns and acknowledge stable event IDs. Old servers and SDK 0.0.2 installations remain compatible; the public API and installation identity are unchanged.
+- Diagnostics include bounded reason codes, timings, byte counts and HTTP status, never image URLs, notification text, tokens or exception messages.
+
 ## 0.0.2 — 2026-09-16
 
 - Offer URL parameters and ID decoration are managed by the host application using the confirmed user ID.

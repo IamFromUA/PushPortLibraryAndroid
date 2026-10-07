@@ -20,6 +20,7 @@ import androidx.work.workDataOf
 import dev.pushport.sdk.NotificationImageWorker
 import dev.pushport.sdk.NotificationOpenActivity
 import dev.pushport.sdk.R
+import dev.pushport.sdk.internal.core.TelemetryTracker
 import dev.pushport.sdk.internal.model.PushMessage
 import dev.pushport.sdk.internal.model.PushProtocol
 import dev.pushport.sdk.internal.ports.NotificationPresenter
@@ -28,6 +29,7 @@ import dev.pushport.sdk.internal.ports.NotificationStateProvider
 internal class AndroidNotificationPresenter(
     private val context: Context,
     private val permissions: NotificationStateProvider,
+    private val telemetry: TelemetryTracker? = null,
 ) : NotificationPresenter {
     override fun createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
@@ -44,7 +46,18 @@ internal class AndroidNotificationPresenter(
     @SuppressLint("MissingPermission")
     override fun show(message: PushMessage) {
         createChannel()
-        if (!permissions.isEnabled()) return
+        if (!permissions.isEnabled()) {
+            telemetry?.record("not_displayed", message.id, "permission_disabled")
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 26 && context
+                .getSystemService(NotificationManager::class.java)
+                .getNotificationChannel(PushProtocol.CHANNEL)
+                ?.importance == NotificationManager.IMPORTANCE_NONE
+        ) {
+            telemetry?.record("not_displayed", message.id, "channel_disabled")
+            return
+        }
         val launch =
             Intent(context, NotificationOpenActivity::class.java)
                 .setAction("${context.packageName}.PUSHPORT.${message.id}")
@@ -70,6 +83,15 @@ internal class AndroidNotificationPresenter(
                 .build()
         try {
             NotificationManagerCompat.from(context).notify(message.id, 0, notification)
+        } catch (_: SecurityException) {
+            telemetry?.record("not_displayed", message.id, "permission_disabled")
+            return
+        } catch (_: RuntimeException) {
+            telemetry?.record("not_displayed", message.id, "notification_error")
+            return
+        }
+        telemetry?.record("posted", message.id)
+        try {
             if (message.imageUrl != null) {
                 val work =
                     OneTimeWorkRequestBuilder<NotificationImageWorker>()
@@ -82,8 +104,8 @@ internal class AndroidNotificationPresenter(
                         ).build()
                 WorkManager.getInstance(context).enqueueUniqueWork("pushport-image-${message.id}", ExistingWorkPolicy.KEEP, work)
             }
-        } catch (_: SecurityException) {
-            // Permission can be revoked between the check and notify().
+        } catch (_: RuntimeException) {
+            telemetry?.record("image_skipped", message.id, "worker_unavailable")
         }
     }
 
@@ -98,9 +120,16 @@ internal class AndroidNotificationPresenter(
         id: String,
         image: Bitmap,
     ) {
-        if (!permissions.isEnabled()) return
+        if (!permissions.isEnabled()) {
+            telemetry?.record("image_skipped", id, "permission_disabled")
+            return
+        }
         val manager = context.getSystemService(NotificationManager::class.java)
-        val current = manager.activeNotifications.firstOrNull { it.tag == id && it.id == 0 } ?: return
+        val current = manager.activeNotifications.firstOrNull { it.tag == id && it.id == 0 }
+        if (current == null) {
+            telemetry?.record("image_skipped", id, "notification_unavailable")
+            return
+        }
         val notification =
             NotificationCompat
                 .Builder(context, current.notification)
@@ -114,8 +143,11 @@ internal class AndroidNotificationPresenter(
                 .build()
         try {
             manager.notify(id, 0, notification)
+            telemetry?.record("image_attached", id)
         } catch (_: SecurityException) {
-            // Permission was revoked during the update.
+            telemetry?.record("image_skipped", id, "permission_disabled")
+        } catch (_: RuntimeException) {
+            telemetry?.record("image_skipped", id, "notification_error")
         }
     }
 }

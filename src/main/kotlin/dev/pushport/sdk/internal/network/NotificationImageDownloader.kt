@@ -5,6 +5,8 @@ package dev.pushport.sdk.internal.network
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import dev.pushport.sdk.internal.model.DEFAULT_IMAGE_BYTES
+import dev.pushport.sdk.internal.model.MAX_IMAGE_BYTES
 import dev.pushport.sdk.internal.model.publicHttpsUrl
 import okhttp3.Dns
 import okhttp3.OkHttpClient
@@ -14,12 +16,42 @@ import java.net.Proxy
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
+internal data class NotificationImageResult(
+    val bitmap: Bitmap?,
+    val reason: String?,
+    val durationMillis: Long,
+    val sizeBytes: Long? = null,
+    val httpStatus: Int? = null,
+)
+
 /** Pins connections to public DNS answers; bounds time, bytes and decoded pixels. No cookies, credentials or redirects. */
-internal class NotificationImageDownloader {
-    fun download(value: String): Bitmap? {
-        val url = publicHttpsUrl(value) ?: return null
-        return runCatching {
-            client
+internal class NotificationImageDownloader(
+    private val http: OkHttpClient = client,
+) {
+    fun download(value: String): Bitmap? = downloadResult(value).bitmap
+
+    fun downloadResult(
+        value: String,
+        maxBytes: Int = DEFAULT_IMAGE_BYTES,
+    ): NotificationImageResult {
+        val started = android.os.SystemClock.elapsedRealtime()
+        val limit = maxBytes.coerceIn(1_048_576, MAX_IMAGE_BYTES)
+        var size: Long? = null
+        var status: Int? = null
+
+        fun result(
+            bitmap: Bitmap? = null,
+            reason: String? = null,
+        ) = NotificationImageResult(
+            bitmap,
+            reason,
+            (android.os.SystemClock.elapsedRealtime() - started).coerceAtLeast(0),
+            size,
+            status,
+        )
+        val url = publicHttpsUrl(value) ?: return result(reason = "invalid_url")
+        return try {
+            http
                 .newCall(
                     Request
                         .Builder()
@@ -27,10 +59,13 @@ internal class NotificationImageDownloader {
                         .header("Accept", "image/png,image/jpeg,image/webp")
                         .build(),
                 ).execute()
-                .use { response ->
-                    if (!response.isSuccessful) return@use null
+                .use responseUse@{ response ->
+                    status = response.code
+                    if (!response.isSuccessful) return@responseUse result(reason = if (response.isRedirect) "redirect" else "http_error")
                     val body = response.body
-                    if (body.contentLength() > MAX_BYTES || body.contentType()?.type != "image") return@use null
+                    size = body.contentLength().takeIf { it >= 0 }
+                    if (body.contentLength() > limit) return@responseUse result(reason = "size_limit")
+                    if (body.contentType()?.type != "image") return@responseUse result(reason = "not_image")
                     val bytes =
                         body.byteStream().use { input ->
                             val output = java.io.ByteArrayOutputStream()
@@ -38,18 +73,32 @@ internal class NotificationImageDownloader {
                             while (true) {
                                 val count = input.read(buffer)
                                 if (count == -1) break
-                                if (output.size() + count > MAX_BYTES) return@use null
+                                size = output.size().toLong() + count
+                                if (output.size() + count > limit) return@responseUse result(reason = "size_limit")
                                 output.write(buffer, 0, count)
                             }
                             output.toByteArray()
-                        } ?: return@use null
-                    decode(bytes)
+                        }
+                    size = bytes.size.toLong()
+                    val bitmap = decode(bytes, limit)
+                    result(bitmap, if (bitmap == null) "decode_failed" else null)
                 }
-        }.getOrNull()
+        } catch (_: java.net.UnknownHostException) {
+            result(reason = "host_unavailable")
+        } catch (_: java.io.InterruptedIOException) {
+            result(reason = "network_timeout")
+        } catch (_: java.io.IOException) {
+            result(reason = "network_error")
+        } catch (_: RuntimeException) {
+            result(reason = "decode_failed")
+        }
     }
 
-    internal fun decode(bytes: ByteArray): Bitmap? {
-        if (bytes.size > MAX_BYTES) return null
+    internal fun decode(
+        bytes: ByteArray,
+        maxBytes: Int = DEFAULT_IMAGE_BYTES,
+    ): Bitmap? {
+        if (bytes.size > maxBytes.coerceIn(1_048_576, MAX_IMAGE_BYTES)) return null
         if (bytes.size < 12) return null
         val png = bytes.take(8) == listOf(137, 80, 78, 71, 13, 10, 26, 10).map(Int::toByte)
         val jpeg = bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte() && bytes[2] == 0xff.toByte()
@@ -76,8 +125,6 @@ internal class NotificationImageDownloader {
     }
 
     companion object {
-        private const val MAX_BYTES = 1_048_576
-
         internal fun isPublic(address: InetAddress): Boolean {
             if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress ||
                 address.isMulticastAddress

@@ -28,9 +28,14 @@ public class NotificationImageWorker public constructor(
             val appId = inputData.getString(PushProtocol.APP_ID) ?: return@withContext Result.failure()
             val url = inputData.getString(PushProtocol.IMAGE_URL) ?: return@withContext Result.failure()
             val runtime = SdkRuntime.from(applicationContext)
-            if (!runtime.canEnrichNotification(appId, id)) return@withContext Result.success()
-            val image = NotificationImageDownloader().download(url) ?: return@withContext Result.success()
-            if (!isStopped) runtime.enrichNotification(appId, id, image)
+            if (!runtime.canEnrichNotification(appId, id)) {
+                runtime.imageSkipped(id)
+                return@withContext Result.success()
+            }
+            val result = NotificationImageDownloader().downloadResult(url, runtime.imageLimitBytes())
+            runtime.imageResult(id, result)
+            val image = result.bitmap ?: return@withContext Result.success()
+            if (!isStopped) runtime.enrichNotification(appId, id, image) else runtime.imageSkipped(id)
             Result.success()
         }
 }

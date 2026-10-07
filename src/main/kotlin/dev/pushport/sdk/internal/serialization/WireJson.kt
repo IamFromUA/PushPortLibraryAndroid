@@ -38,6 +38,7 @@ internal object WireJson {
             .put("notificationsEnabled", value.notificationsEnabled)
             .put("pushSubscribed", value.pushSubscribed)
             .put("sdkVersion", value.sdkVersion)
+            .put("telemetryVersion", 1)
             .put("appVersion", value.appVersion)
             .put("appVersionCode", value.appVersionCode)
             .put("osVersion", value.osVersion)
