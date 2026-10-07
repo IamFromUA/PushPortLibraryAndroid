@@ -188,6 +188,23 @@ class AndroidAdaptersTest {
         }
     }
 
+    @Test fun `registration advertises metrics only after server capability negotiation`() {
+        MockWebServer().use { server ->
+            val api = HttpInstallationApi(UrlConnectionTransport(PushPortConfig(TEST_APP_ID, server.url("/").toString(), true)))
+            for (supported in listOf(false, true, false)) {
+                val config = if (supported) """{"firebase":null,"telemetryVersion":1}""" else """{"firebase":null}"""
+                server.enqueue(MockResponse().setBody(config))
+                api.settings("dev.pushport.testapp")
+                server.takeRequest()
+                server.enqueue(MockResponse().setResponseCode(204))
+                api.registerAndReadUser(TEST_IDENTITY, testSnapshot())
+                val body = JSONObject(server.takeRequest().body.readUtf8())
+                assertEquals(supported, body.has("telemetryVersion"))
+                if (supported) assertEquals(1, body.getInt("telemetryVersion"))
+            }
+        }
+    }
+
     @Test fun `oversized network responses are bounded`() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("x".repeat(65_537)))

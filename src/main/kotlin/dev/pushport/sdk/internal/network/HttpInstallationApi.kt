@@ -14,6 +14,8 @@ import java.net.URLEncoder
 internal class HttpInstallationApi(
     private val transport: UrlConnectionTransport,
 ) : InstallationApi {
+    private var telemetryVersion = 0
+
     override fun configuration(packageName: String): FirebaseConfiguration? = settings(packageName).firebase
 
     override fun settings(packageName: String): dev.pushport.sdk.internal.model.RemoteConfiguration {
@@ -21,12 +23,13 @@ internal class HttpInstallationApi(
         val response = transport.request("GET", "/config?packageName=$encoded")
         val document = JSONObject(response)
         require(document.has("firebase")) { "Missing Firebase configuration field" }
+        telemetryVersion = document.optInt("telemetryVersion", 0)
         return dev.pushport.sdk.internal.model.RemoteConfiguration(
             if (document.isNull("firebase")) null else WireJson.firebase(document.getJSONObject("firebase")),
             document
                 .optInt("imageLimitBytes", dev.pushport.sdk.internal.model.DEFAULT_IMAGE_BYTES)
                 .coerceIn(1024 * 1024, dev.pushport.sdk.internal.model.MAX_IMAGE_BYTES),
-            document.optInt("telemetryVersion", 0),
+            telemetryVersion,
         )
     }
 
@@ -34,14 +37,14 @@ internal class HttpInstallationApi(
         identity: InstallationIdentity,
         snapshot: DeviceSnapshot,
     ) {
-        transport.request("PUT", "/installations/${identity.id}", identity.secret, WireJson.snapshot(snapshot).toString())
+        transport.request("PUT", "/installations/${identity.id}", identity.secret, registrationBody(snapshot))
     }
 
     override fun registerAndReadUser(
         identity: InstallationIdentity,
         snapshot: DeviceSnapshot,
     ): dev.pushport.sdk.PushPortUser? {
-        val response = transport.request("PUT", "/installations/${identity.id}", identity.secret, WireJson.snapshot(snapshot).toString())
+        val response = transport.request("PUT", "/installations/${identity.id}", identity.secret, registrationBody(snapshot))
         if (response.isBlank()) return null // Legacy 204 registration responses have no profile.
         val json = JSONObject(response)
         return json.optJSONObject("user")?.let(dev.pushport.sdk.internal.serialization.UserJson::profile)
@@ -63,6 +66,14 @@ internal class HttpInstallationApi(
                 ),
             ),
         )
+
+    private fun registrationBody(snapshot: DeviceSnapshot): String =
+        WireJson
+            .snapshot(snapshot)
+            .apply {
+                // Legacy servers reject unknown registration fields. Advertise metrics only after negotiation.
+                if (telemetryVersion < 1) remove("telemetryVersion")
+            }.toString()
 
     override fun opened(
         identity: InstallationIdentity,
