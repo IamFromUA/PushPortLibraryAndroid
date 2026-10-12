@@ -6,9 +6,11 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Android SDK 0.0.4** uses Maven coordinates `dev.pushport:android-sdk:0.0.4`. The SDK is licensed under [Apache License 2.0](LICENSE).
+**Android SDK 0.0.5** uses Maven coordinates `dev.pushport:android-sdk:0.0.5`. The SDK is licensed under [Apache License 2.0](LICENSE).
 
-SDK 0.0.4 adds separate Android thumbnails and custom status icons. See [Android icons](docs/rich-notifications.md#android-icons-sdk-004). Published SDK 0.0.3 and older ignore these optional fields and retain their existing notification behavior.
+SDK 0.0.5 supports static GIF images and retains big pictures up to 2000 pixels per side. The default download limit remains 5 MiB (optionally 1–20 MiB).
+
+SDK 0.0.4 added separate Android thumbnails and custom status icons. See [Android icons](docs/rich-notifications.md#android-icons-sdk-004). Published SDK 0.0.3 and older ignore these optional fields and retain their existing notification behavior.
 
 ## Integration
 
@@ -17,7 +19,7 @@ SDK 0.0.4 adds separate Android thumbnails and custom status icons. See [Android
 
    ```kotlin
    dependencies {
-       implementation("dev.pushport:android-sdk:0.0.4")
+       implementation("dev.pushport:android-sdk:0.0.5")
    }
    ```
 

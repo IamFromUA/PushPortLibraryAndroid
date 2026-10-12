@@ -145,7 +145,22 @@ class RichNotificationTest {
         val bitmap = BufferedImage(2048, 512, BufferedImage.TYPE_INT_ARGB)
         val bytes = ByteArrayOutputStream().also { ImageIO.write(bitmap, "png", it) }.toByteArray()
         val decoded = loader.decode(bytes)!!
-        assertTrue(decoded.width <= 1024)
+        assertTrue(decoded.width <= 2000)
+    }
+
+    @Test fun `image decoder retains a 2000 pixel banner and renders GIF as a static bitmap`() {
+        val loader = NotificationImageDownloader()
+        val banner = BufferedImage(2000, 1000, BufferedImage.TYPE_INT_RGB)
+        val png = ByteArrayOutputStream().also { ImageIO.write(banner, "png", it) }.toByteArray()
+        val decoded = loader.decode(png)!!
+        assertEquals(2000, decoded.width)
+        assertEquals(1000, decoded.height)
+        val source = BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB)
+        val gif = ByteArrayOutputStream().also { ImageIO.write(source, "gif", it) }.toByteArray()
+        val firstFrame = loader.decode(gif)!!
+        assertEquals(256, firstFrame.width)
+        assertEquals(256, firstFrame.height)
+        assertNull(loader.decode("GIF89a-broken-data".toByteArray()))
     }
 
     @Test fun `enrichment preserves click intent and does not recreate a dismissed notification`() {

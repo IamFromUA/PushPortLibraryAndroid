@@ -10,7 +10,7 @@ Initialize `PushPort` from the host application's `Application.onCreate` with th
 
 ## Release status
 
-Version 0.0.4 uses Maven coordinates `dev.pushport:android-sdk:0.0.4` and adds independent Android thumbnails and bundled status icons. Consult the source distribution's README and compatibility guide before integrating or upgrading.
+Version 0.0.5 uses Maven coordinates `dev.pushport:android-sdk:0.0.5`, supports static GIF images and retains big pictures up to 2000 pixels per side. Independent thumbnails and bundled status icons introduced in 0.0.4 remain supported. Consult the source distribution's README and compatibility guide before integrating or upgrading.
 
 ## License and publisher
 

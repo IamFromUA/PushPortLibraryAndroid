@@ -56,7 +56,7 @@ internal class NotificationImageDownloader(
                     Request
                         .Builder()
                         .url(url)
-                        .header("Accept", "image/png,image/jpeg,image/webp")
+                        .header("Accept", "image/png,image/jpeg,image/gif,image/webp")
                         .build(),
                 ).execute()
                 .use responseUse@{ response ->
@@ -104,7 +104,16 @@ internal class NotificationImageDownloader(
         val jpeg = bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte() && bytes[2] == 0xff.toByte()
         val webp =
             bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "RIFF" && bytes.copyOfRange(8, 12).toString(Charsets.US_ASCII) == "WEBP"
-        if (!png && !jpeg && !webp) return null
+        val gif = bytes.copyOfRange(0, 6).toString(Charsets.US_ASCII) in setOf("GIF87a", "GIF89a")
+        if (!png && !jpeg && !webp && !gif) return null
+        return try {
+            decodeBitmap(bytes)
+        } catch (_: RuntimeException) {
+            null
+        }
+    }
+
+    private fun decodeBitmap(bytes: ByteArray): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         if (bounds.outWidth !in 1..4096 || bounds.outHeight !in 1..4096 ||
@@ -115,8 +124,8 @@ internal class NotificationImageDownloader(
         val options =
             BitmapFactory.Options().apply {
                 inSampleSize = 1
-                while (bounds.outWidth / inSampleSize > 1024 ||
-                    bounds.outHeight / inSampleSize > 1024
+                while (bounds.outWidth / inSampleSize > 2000 ||
+                    bounds.outHeight / inSampleSize > 2000
                 ) {
                     inSampleSize *= 2
                 }

@@ -2,7 +2,7 @@
 
 ## Current state
 
-The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. The release version is `0.0.4`; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
+The project produces a release AAR, sources JAR, Dokka `javadoc` JAR, POM and Gradle module metadata. The release version is `0.0.5`; `build/maven-repository` remains the local verification repository. The SDK has its own wrapper, settings, consumer fixture and verification workflow. Remote origin is `https://github.com/IamFromUA/PushPortLibraryAndroid.git`. The manual Publish Maven Central workflow is configured with protected environment credentials.
 
 Publisher setup completed on 2026-09-13:
 
@@ -10,11 +10,13 @@ Publisher setup completed on 2026-09-13:
 - The owner selected Apache License 2.0 for the SDK. Copyright holder and publisher: Oleh Yurkov; project name: PushPort; public contact: `support@pushport.dev`.
 - The POM declares license, developer, SCM and issue tracker metadata. Canonical `LICENSE` and `NOTICE` files are included in all published code/documentation archives. See [licensing](licensing.md).
 
-Version `0.0.4` uses coordinates `dev.pushport:android-sdk:0.0.4`. Verify public Maven Central availability after the publication workflow finishes. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
+Version `0.0.5` uses coordinates `dev.pushport:android-sdk:0.0.5`. Verify public Maven Central availability after the publication workflow finishes. Publication credentials are needed only by maintainers releasing a new version; users need no token to download the SDK.
 
 Version `0.0.2` added confirmed user profiles, verified account linking, optional user properties/events, foreground sessions and optional consent controls. Version `0.0.3` adds notification diagnostics and a configurable image limit with a 5 MiB default. Deploy the additive telemetry backend migration before releasing 0.0.3; existing 0.0.1 and 0.0.2 clients remain supported. Offer URL parameters and ID formatting belong to the host application.
 
 Version `0.0.4` adds independent Android thumbnails and custom bundled status icons. It preserves the public API, installation identity and image-worker inputs of earlier versions. Its app defaults are `ic_stat_pushport_default` and `ic_pushport_large_icon_default`. The SDK can be released before the corresponding campaign-editor/backend rollout: older servers simply omit the optional icon fields.
+
+Version `0.0.5` retains big pictures up to 2000 pixels per side and accepts GIF as a static first frame. The thumbnail remains bounded at 256 pixels. The default 5 MiB download limit and optional 1–20 MiB app setting remain unchanged. No public API, storage or worker identity changes are required.
 
 ## Prepare a candidate
 
