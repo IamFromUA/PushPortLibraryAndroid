@@ -23,6 +23,7 @@ import dev.pushport.sdk.R
 import dev.pushport.sdk.internal.core.TelemetryTracker
 import dev.pushport.sdk.internal.model.PushMessage
 import dev.pushport.sdk.internal.model.PushProtocol
+import dev.pushport.sdk.internal.model.publicHttpsUrl
 import dev.pushport.sdk.internal.ports.NotificationPresenter
 import dev.pushport.sdk.internal.ports.NotificationStateProvider
 
@@ -31,6 +32,8 @@ internal class AndroidNotificationPresenter(
     private val permissions: NotificationStateProvider,
     private val telemetry: TelemetryTracker? = null,
 ) : NotificationPresenter {
+    private val icons = AndroidNotificationIcons(context)
+
     override fun createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             val channel =
@@ -73,7 +76,8 @@ internal class AndroidNotificationPresenter(
         val notification =
             NotificationCompat
                 .Builder(context, PushProtocol.CHANNEL)
-                .setSmallIcon(R.drawable.pushport_notification)
+                .setSmallIcon(icons.small(message.smallIcon))
+                .setLargeIcon(icons.large(message.largeIcon))
                 .setContentTitle(message.title)
                 .setContentText(message.body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message.body))
@@ -91,21 +95,30 @@ internal class AndroidNotificationPresenter(
             return
         }
         telemetry?.record("posted", message.id)
+        message.imageUrl?.let { enqueueImage(message, it, largeIcon = false) }
+        publicHttpsUrl(message.largeIcon)?.let { enqueueImage(message, it, largeIcon = true) }
+    }
+
+    private fun enqueueImage(
+        message: PushMessage,
+        url: String,
+        largeIcon: Boolean,
+    ) {
         try {
-            if (message.imageUrl != null) {
-                val work =
-                    OneTimeWorkRequestBuilder<NotificationImageWorker>()
-                        .setInputData(
-                            workDataOf(
-                                PushProtocol.APP_ID to message.appId,
-                                PushProtocol.MESSAGE_ID to message.id,
-                                PushProtocol.IMAGE_URL to message.imageUrl,
-                            ),
-                        ).build()
-                WorkManager.getInstance(context).enqueueUniqueWork("pushport-image-${message.id}", ExistingWorkPolicy.KEEP, work)
-            }
+            val work =
+                OneTimeWorkRequestBuilder<NotificationImageWorker>()
+                    .setInputData(
+                        workDataOf(
+                            PushProtocol.APP_ID to message.appId,
+                            PushProtocol.MESSAGE_ID to message.id,
+                            PushProtocol.IMAGE_URL to url,
+                            PushProtocol.IMAGE_KIND to if (largeIcon) "large_icon" else "picture",
+                        ),
+                    ).build()
+            val prefix = if (largeIcon) "pushport-large-icon" else "pushport-image"
+            WorkManager.getInstance(context).enqueueUniqueWork("$prefix-${message.id}", ExistingWorkPolicy.KEEP, work)
         } catch (_: RuntimeException) {
-            telemetry?.record("image_skipped", message.id, "worker_unavailable")
+            if (!largeIcon) telemetry?.record("image_skipped", message.id, "worker_unavailable")
         }
     }
 
@@ -116,38 +129,53 @@ internal class AndroidNotificationPresenter(
         }
 
     @SuppressLint("MissingPermission")
+    @Synchronized
     fun enrich(
         id: String,
         image: Bitmap,
+        largeIcon: Boolean = false,
     ) {
         if (!permissions.isEnabled()) {
-            telemetry?.record("image_skipped", id, "permission_disabled")
+            if (!largeIcon) telemetry?.record("image_skipped", id, "permission_disabled")
             return
         }
         val manager = context.getSystemService(NotificationManager::class.java)
         val current = manager.activeNotifications.firstOrNull { it.tag == id && it.id == 0 }
         if (current == null) {
-            telemetry?.record("image_skipped", id, "notification_unavailable")
+            if (!largeIcon) telemetry?.record("image_skipped", id, "notification_unavailable")
             return
         }
+        val builder = NotificationCompat.Builder(context, current.notification)
+        if (largeIcon) {
+            val scale = minOf(1.0, 256.0 / maxOf(image.width, image.height))
+            builder.setLargeIcon(
+                Bitmap.createScaledBitmap(
+                    image,
+                    (image.width * scale).toInt().coerceAtLeast(1),
+                    (image.height * scale).toInt().coerceAtLeast(1),
+                    true,
+                ),
+            )
+        } else {
+            builder.setStyle(
+                NotificationCompat
+                    .BigPictureStyle()
+                    .bigPicture(
+                        image,
+                    ).setSummaryText(current.notification.extras.getCharSequence("android.text")),
+            )
+        }
         val notification =
-            NotificationCompat
-                .Builder(context, current.notification)
-                .setStyle(
-                    NotificationCompat
-                        .BigPictureStyle()
-                        .bigPicture(
-                            image,
-                        ).setSummaryText(current.notification.extras.getCharSequence("android.text")),
-                ).setOnlyAlertOnce(true)
+            builder
+                .setOnlyAlertOnce(true)
                 .build()
         try {
             manager.notify(id, 0, notification)
-            telemetry?.record("image_attached", id)
+            if (!largeIcon) telemetry?.record("image_attached", id)
         } catch (_: SecurityException) {
-            telemetry?.record("image_skipped", id, "permission_disabled")
+            if (!largeIcon) telemetry?.record("image_skipped", id, "permission_disabled")
         } catch (_: RuntimeException) {
-            telemetry?.record("image_skipped", id, "notification_error")
+            if (!largeIcon) telemetry?.record("image_skipped", id, "notification_error")
         }
     }
 }

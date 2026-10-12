@@ -6,7 +6,9 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Version 0.0.3 is published on Maven Central** as `dev.pushport:android-sdk:0.0.3`. The SDK is licensed under [Apache License 2.0](LICENSE).
+**Android SDK 0.0.4** uses Maven coordinates `dev.pushport:android-sdk:0.0.4`. The SDK is licensed under [Apache License 2.0](LICENSE).
+
+SDK 0.0.4 adds separate Android thumbnails and custom status icons. See [Android icons](docs/rich-notifications.md#android-icons-sdk-004). Published SDK 0.0.3 and older ignore these optional fields and retain their existing notification behavior.
 
 ## Integration
 
@@ -15,7 +17,7 @@ PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 
    ```kotlin
    dependencies {
-       implementation("dev.pushport:android-sdk:0.0.3")
+       implementation("dev.pushport:android-sdk:0.0.4")
    }
    ```
 

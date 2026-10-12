@@ -26,7 +26,7 @@ Add the dependency in the application module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("dev.pushport:android-sdk:0.0.3")
+    implementation("dev.pushport:android-sdk:0.0.4")
 }
 ```
 

@@ -135,6 +135,9 @@ internal class SdkRuntime private constructor(
         androidx.work.WorkManager
             .getInstance(application)
             .cancelUniqueWork("pushport-image-$messageId")
+        androidx.work.WorkManager
+            .getInstance(application)
+            .cancelUniqueWork("pushport-large-icon-$messageId")
     }
 
     fun canEnrichNotification(
@@ -150,11 +153,12 @@ internal class SdkRuntime private constructor(
         appId: String,
         messageId: String,
         image: android.graphics.Bitmap,
+        largeIcon: Boolean = false,
     ) {
         if (canEnrichNotification(appId, messageId)) {
-            presenter.enrich(messageId, image)
+            presenter.enrich(messageId, image, largeIcon)
         } else {
-            telemetry.record("image_skipped", messageId, "notification_unavailable")
+            if (!largeIcon) telemetry.record("image_skipped", messageId, "notification_unavailable")
         }
     }
 

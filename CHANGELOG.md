@@ -1,5 +1,11 @@
 # Изменения SDK
 
+## 0.0.4 — 2026-10-12
+
+- Раздельные миниатюра Android (`large_icon`: HTTPS или ресурс приложения) и маленькая иконка строки состояния (`small_icon`: ресурс приложения).
+- Стандартные ресурсы приложения `ic_stat_pushport_default` и `ic_pushport_large_icon_default`; безопасный возврат к стандартному оформлению при отсутствии ресурса или ошибке загрузки.
+- Независимая загрузка миниатюры и большой картинки, сохранение клика и обновление без повторного звука. Публичный API SDK не меняется.
+
 ## 0.0.3 — 2026-10-07
 
 - Notification images default to 5 MiB. Each application's dashboard can optionally change the limit to 1–20 MiB; the SDK caches server settings.

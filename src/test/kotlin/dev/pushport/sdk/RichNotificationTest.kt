@@ -8,8 +8,11 @@ import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Bitmap
 import dev.pushport.sdk.internal.model.PushMessage
+import dev.pushport.sdk.internal.model.notificationIconName
+import dev.pushport.sdk.internal.model.notificationLargeIcon
 import dev.pushport.sdk.internal.model.publicHttpsUrl
 import dev.pushport.sdk.internal.network.NotificationImageDownloader
+import dev.pushport.sdk.internal.platform.AndroidNotificationIcons
 import dev.pushport.sdk.internal.platform.AndroidNotificationPresenter
 import dev.pushport.sdk.internal.ports.NotificationStateProvider
 import org.junit.Assert.assertEquals
@@ -30,6 +33,93 @@ import javax.imageio.ImageIO
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], application = Application::class)
 class RichNotificationTest {
+    @Test fun `status icons accept resource names and thumbnails also accept public HTTPS`() {
+        assertEquals("ic_stat_offer", notificationIconName("ic_stat_offer"))
+        listOf("https://example.com/icon.png", "ic_stat.png", "android:drawable/icon", "../icon", "IC_ICON").forEach {
+            assertNull(notificationIconName(it))
+        }
+        assertEquals("https://example.com/icon.png", notificationLargeIcon("https://example.com/icon.png"))
+        assertEquals("ic_avatar", notificationLargeIcon("ic_avatar"))
+        assertNull(notificationLargeIcon("http://example.com/icon.png"))
+        val icons = AndroidNotificationIcons(RuntimeEnvironment.getApplication())
+        assertEquals(R.drawable.pushport_notification, icons.small("missing_icon"))
+        assertEquals(R.drawable.pushport_notification, icons.small("https://example.com/icon.png"))
+        assertNull(icons.large("missing_icon"))
+        assertTrue(icons.large("pushport_notification") != null)
+    }
+
+    @Test fun `thumbnail and picture enrichment preserve each other and the original click intent in either order`() {
+        val context = RuntimeEnvironment.getApplication()
+        val permissions =
+            object : NotificationStateProvider {
+                override fun isEnabled() = true
+            }
+        val presenter = AndroidNotificationPresenter(context, permissions)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        for (thumbnailFirst in listOf(true, false)) {
+            val id = UUID.randomUUID().toString()
+            presenter.show(PushMessage(UUID.randomUUID().toString(), id, "Icons", "Both assets", smallIcon = "pushport_notification"))
+            val original =
+                manager.activeNotifications
+                    .single { it.tag == id }
+                    .notification.contentIntent
+            val picture = Bitmap.createBitmap(800, 400, Bitmap.Config.ARGB_8888)
+            val thumbnail = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+            if (thumbnailFirst) {
+                presenter.enrich(id, thumbnail, largeIcon = true)
+                presenter.enrich(id, picture)
+            } else {
+                presenter.enrich(id, picture)
+                presenter.enrich(id, thumbnail, largeIcon = true)
+            }
+            val posted = manager.activeNotifications.single { it.tag == id }.notification
+            assertEquals(original, posted.contentIntent)
+            assertEquals(R.drawable.pushport_notification, posted.smallIcon.resId)
+            @Suppress("DEPRECATION")
+            val shownPicture = posted.extras.getParcelable<Bitmap>("android.picture")!!
+            val shownThumbnail = (posted.getLargeIcon().loadDrawable(context) as android.graphics.drawable.BitmapDrawable).bitmap
+            // Android may resize the picture to its notification dimensions.
+            assertTrue(shownPicture.width > 0)
+            assertEquals(2.0, shownPicture.width.toDouble() / shownPicture.height, 0.02)
+            assertTrue(shownThumbnail.width <= 256)
+            assertTrue(shownThumbnail.height <= 256)
+            manager.cancel(id, 0)
+            presenter.enrich(id, thumbnail, largeIcon = true)
+            assertFalse(presenter.isVisible(id))
+        }
+    }
+
+    @Test fun `resource thumbnail is visible immediately and missing status icons safely fall back`() {
+        val context = RuntimeEnvironment.getApplication()
+        val presenter =
+            AndroidNotificationPresenter(
+                context,
+                object : NotificationStateProvider {
+                    override fun isEnabled() = true
+                },
+            )
+        val id = UUID.randomUUID().toString()
+        presenter.show(
+            PushMessage(
+                UUID.randomUUID().toString(),
+                id,
+                "Local thumbnail",
+                "Body",
+                largeIcon = "pushport_notification",
+                smallIcon = "missing",
+            ),
+        )
+        val notification =
+            context
+                .getSystemService(
+                    NotificationManager::class.java,
+                ).activeNotifications
+                .single { it.tag == id }
+                .notification
+        assertEquals(R.drawable.pushport_notification, notification.smallIcon.resId)
+        assertTrue(notification.getLargeIcon() != null)
+    }
+
     @Test fun `external links accept public HTTPS only and image DNS blocks private destinations`() {
         assertEquals("https://pushport.dev/article?a=1", publicHttpsUrl("https://pushport.dev/article?a=1"))
         listOf(

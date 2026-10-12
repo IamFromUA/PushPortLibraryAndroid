@@ -12,6 +12,8 @@ internal data class PushMessage(
     val body: String,
     val imageUrl: String? = null,
     val clickUrl: String? = null,
+    val largeIcon: String? = null,
+    val smallIcon: String? = null,
 )
 
 internal fun isCanonicalUuid(value: String): Boolean = runCatching { UUID.fromString(value).toString() == value }.getOrDefault(false)
@@ -23,6 +25,9 @@ internal object PushProtocol {
     const val APP_ID = "pushport_app_id"
     const val IMAGE_URL = "image_url"
     const val CLICK_URL = "click_url"
+    const val LARGE_ICON = "large_icon"
+    const val SMALL_ICON = "small_icon"
+    const val IMAGE_KIND = "pushport_image_kind"
     const val RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE"
     const val MAX_PENDING_MESSAGES = 100
 }

@@ -27,15 +27,20 @@ public class NotificationImageWorker public constructor(
             val id = inputData.getString(PushProtocol.MESSAGE_ID) ?: return@withContext Result.failure()
             val appId = inputData.getString(PushProtocol.APP_ID) ?: return@withContext Result.failure()
             val url = inputData.getString(PushProtocol.IMAGE_URL) ?: return@withContext Result.failure()
+            val largeIcon = inputData.getString(PushProtocol.IMAGE_KIND) == "large_icon"
             val runtime = SdkRuntime.from(applicationContext)
             if (!runtime.canEnrichNotification(appId, id)) {
-                runtime.imageSkipped(id)
+                if (!largeIcon) runtime.imageSkipped(id)
                 return@withContext Result.success()
             }
             val result = NotificationImageDownloader().downloadResult(url, runtime.imageLimitBytes())
-            runtime.imageResult(id, result)
+            if (!largeIcon) runtime.imageResult(id, result)
             val image = result.bitmap ?: return@withContext Result.success()
-            if (!isStopped) runtime.enrichNotification(appId, id, image) else runtime.imageSkipped(id)
+            if (!isStopped) {
+                runtime.enrichNotification(appId, id, image, largeIcon)
+            } else if (!largeIcon) {
+                runtime.imageSkipped(id)
+            }
             Result.success()
         }
 }

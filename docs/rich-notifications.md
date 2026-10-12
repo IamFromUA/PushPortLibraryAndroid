@@ -4,7 +4,24 @@ SDK 0.0.1 accepts optional `image_url` and `click_url` fields from PushPort. Con
 
 The SDK displays the text immediately. An independent WorkManager job downloads an image and applies Android BigPictureStyle to the notification if it is still active and the installation remains subscribed with permission. The update retains the click intent and uses `onlyAlertOnce`. Failed, oversized, unsupported or unavailable images leave the text notification intact. Opening the notification cancels its image job. Dismissal is checked before updating; Android does not provide an atomic check-and-update operation.
 
-## Image contract
+## Android icons (SDK 0.0.4+)
+
+SDK 0.0.4 also accepts `large_icon` and `small_icon`, independently of `image_url`:
+
+- `large_icon`: a public HTTPS image URL or the name of a drawable/mipmap bundled in the app. A square 256 × 256 image is recommended. Remote images use the same download limits as the big picture and are reduced to at most 256 pixels per side. A failed download keeps the text notification and its default thumbnail.
+- `small_icon`: a drawable/mipmap resource name without an extension, for example `ic_stat_offer`. It must already exist in the app. Use a monochrome white silhouette on a transparent background; Android supplies the color. Remote URLs cannot be used for this icon.
+- App defaults: `ic_stat_pushport_default` for the status icon and `ic_pushport_large_icon_default` for the thumbnail. Missing custom resources fall back to those defaults. If neither exists, the SDK uses its standard status icon and omits the thumbnail.
+
+No extra initialization call or permission is required. These fields are supported by campaign/test-send forms and optional table columns `large_icon,small_icon`. Older SDK builds ignore them and continue displaying the existing text and big picture. The placement and cropping of icons depend on Android and the device manufacturer.
+
+If release builds shrink resources, retain any dynamically selected icon names in `res/raw/keep.xml`:
+
+```xml
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_offer,@drawable/ic_stat_pushport_default,@drawable/ic_pushport_large_icon_default" />
+```
+
+## Image download limits
 
 - Public HTTPS hostname, port 443, URL at most 1,000 characters, no embedded credentials.
 - PNG, JPEG or WebP; image content type. SDK 0.0.3 defaults to 5 MiB downloaded; the application owner can set 1–20 MiB in dashboard settings. Values are fetched and cached automatically. SDK 0.0.2 and older retain 1 MiB.
@@ -22,4 +39,4 @@ Opening analytics indicate a notification tap reported by this installation. FCM
 
 ## Upgrade
 
-Use `dev.pushport:android-sdk:0.0.3` for the current release. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with those local PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.
+Use `dev.pushport:android-sdk:0.0.4` for Android icon support. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with earlier PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.

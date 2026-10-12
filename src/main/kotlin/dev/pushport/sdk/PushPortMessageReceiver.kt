@@ -50,6 +50,12 @@ public class PushPortMessageReceiver : BroadcastReceiver() {
                 clickUrl =
                     dev.pushport.sdk.internal.model
                         .publicHttpsUrl(intent.getStringExtra(PushProtocol.CLICK_URL)),
+                largeIcon =
+                    dev.pushport.sdk.internal.model
+                        .notificationLargeIcon(intent.getStringExtra(PushProtocol.LARGE_ICON)),
+                smallIcon =
+                    dev.pushport.sdk.internal.model
+                        .notificationIconName(intent.getStringExtra(PushProtocol.SMALL_ICON)),
             )
         return SdkRuntime.from(context).pushHandler.accept(message)
     }
