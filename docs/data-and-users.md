@@ -1,14 +1,14 @@
 # Data collection and user identity
 
-Available starting with **Android SDK 0.0.2**. The compatible backend V13 is deployed at `https://pushport.dev`. Existing installations and their credentials are preserved when upgrading from 0.0.1.
+Available starting with **Android SDK 0.0.2**. The production backend at `https://pushport.dev` supports this contract; the current Android release is **0.0.5**. Existing installations and their credentials are preserved when upgrading from 0.0.1.
 
 ## Automatic data
 
 | Data | Source and behavior |
 | --- | --- |
 | Installation ID | Random UUID, one subscription per app installation. Survives process restarts; no-backup storage prevents restoration onto another install. |
-| User ID | Server-generated UUID. By default, Android installations with the same valid Android ID share a device profile within one PushPort app. Verified External ID can link an authenticated account across devices. |
-| Android ID | Optional `Settings.Secure.ANDROID_ID`. Used for automatic device-profile linking after reinstall, never as an installation credential or proof of account ownership. Not a universal person identifier. |
+| User ID | Server-generated UUID. Each fresh installation creates an independent anonymous user. Updates/restarts preserve the existing user. Android ID does not merge profiles or copy tags after reinstall. Verified External ID can link an authenticated account across devices. |
+| Android ID | Optional `Settings.Secure.ANDROID_ID`. Stored as app-scoped device history, never used to restore/merge users, as an installation credential or as proof of account ownership. Not a universal person identifier. |
 | Delivery | FCM token and token changes, Android permission, app opt-in/out, invalid-token history on the server. |
 | Localization | Language, effective locale, app/system locale lists, IANA timezone; updates on foreground/configuration changes. `setLocale` overrides the reported locale. |
 | Network | Carrier name where Android exposes it without additional permissions. Backend records last IP and approximate country from trusted ingress, not GPS. A VPN may change country. |
@@ -49,11 +49,11 @@ No location permission is requested by PushPort; the host supplies authorized co
 
 ### Default Android behavior — no extra integration calls
 
-Initialize PushPort normally. On first registration the backend links the installation to a device profile using its valid Android ID, scoped to the PushPort App ID. Reinstalling on the same Android user/device with the same signing key normally creates **one user and two installation subscriptions**. The installation UUID, random secret and token remain separate; invalid-token history and permission status stay on each subscription. The SDK already sends `androidId`, so backend V11 enables linking even for existing SDK clients that send that field.
+Initialize PushPort normally. Every fresh installation creates an independent anonymous user, even if its Android ID matches a previous installation. A reinstall creates a new installation UUID, secret and userId; existing installations and profiles retain their identity. Android ID is recorded only as device history scoped to the PushPort App ID. Tags and registration/purchase state are not copied to a reinstall; report the relevant events for the new user or use explicit verified login.
 
-Missing, zero, malformed or the known non-unique `9774d56d682e549c` Android ID falls back to an independent anonymous user. A different Android ID creates a different device profile. Linking is decided once per installation; later telemetry changes cannot silently switch its user, undo logout or log into an authenticated account. Android ID is client-supplied metadata, not an authentication mechanism: device-profile properties are shared with other installations claiming that ID. Use verified login for account-owned data.
+Missing, zero, malformed or the known non-unique `9774d56d682e549c` Android ID is ignored for device history. Telemetry cannot switch the user, undo logout or log into an authenticated account. Android ID is client-supplied metadata and is not authentication. Verified login is required to link an authenticated account across installations.
 
-This reproduces the reinstall outcome of a host app calling `OneSignal.login(androidId)`; it is an explicit PushPort default, not OneSignal's anonymous default. No changes to the host app or Android permission flow are required.
+The host does not need an extra call for anonymous registration. If it uses OneSignal.login(androidId), that is an explicit identity-linking choice in the host and is not the default PushPort behavior.
 
 ### Explicit account login
 
@@ -71,7 +71,7 @@ PushPort.logout(context)
 
 Never embed owner credentials in Android. A proof is bound to app + installation + exact External ID, expires after five minutes and is consumed once. After a failed/expired login obtain a new proof and call login again. The identity-proof endpoint uses the backend's existing owner authentication. Public scoped API keys and partner adapters support lookup and sending; they cannot mint login proofs.
 
-An existing External ID switches this subscription to the known user without copying anonymous properties over that user. A new External ID retains anonymous properties. If the starting profile is device-linked, these properties are copied into a separate account profile so other installations linked only by Android ID do not gain access to the account. A plain anonymous profile keeps its user ID. Switching from an identified user to a different new account creates a separate profile. Logout detaches only this installation; other devices remain linked. Anonymous/device-profile logout is a no-op for identity. Android ID and push token do not change on account login/logout. Reinstalling reconnects the device profile automatically; reconnecting an authenticated account still requires verified login.
+An existing External ID switches this subscription to the known user without copying anonymous properties over that user. A new External ID retains anonymous properties. If the starting profile is device-linked, these properties are copied into a separate account profile so other installations linked only by Android ID do not gain access to the account. A plain anonymous profile keeps its user ID. Switching from an identified user to a different new account creates a separate profile. Logout detaches only this installation; other devices remain linked. Anonymous/device-profile logout is a no-op for identity. Android ID and push token do not change on account login/logout. Reinstalling creates a new anonymous user; reconnecting an authenticated account requires verified login.
 
 Calls enqueue changes; they do not wait for a server response. Check `status().syncError` and `user()` for confirmation. Up to 100 operations persist in no-backup storage; a full queue throws instead of silently losing events. Retries use monotonic revisions to avoid duplicate application. Login/logout discard **unsent** user operations from the prior account, while already in-flight requests may finish. A failed login blocks subsequent queued user properties so they cannot land on the previous account. Renewed login or logout replaces that queue. Telemetry synchronization continues independently. Metadata rejected permanently with HTTP 400/422 is removed and reported through syncError; later operations proceed on the next synchronization. Authentication failures remain queued until corrected.
 
@@ -79,6 +79,6 @@ Limits: 50 tags, keys ≤64 and values ≤256 characters; External ID ≤128 wit
 
 ## OneSignal comparison
 
-The design follows the user/subscription distinction and the automatic/manual data categories documented by OneSignal; it is not a wire-compatible clone. PushPort automatically links Android device profiles using Android ID, while verified account linking requires server-issued proof. Native Apple/Web wrappers have not yet gained these user APIs or Android device linking. The KMP Android adapter inherits native Android registration behavior.
+The design follows the user/subscription distinction and the automatic/manual data categories documented by OneSignal; it is not a wire-compatible clone. PushPort treats Android ID as history only; verified account linking requires a server-issued proof. Apple, Web and KMP SDK 0.0.2 support confirmed profiles, tags, verified login/logout, consent and optional contact/location/events. Apple/Web do not collect Android ID. KMP reuses the native SDK and creates no second installation.
 
 References: [SDK data collection](https://documentation.onesignal.com/docs/en/data-collected-by-the-onesignal-sdk), [user/subscription properties](https://documentation.onesignal.com/docs/en/user-subscription-properties), [Android ID](https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID).

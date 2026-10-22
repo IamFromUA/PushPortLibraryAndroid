@@ -42,7 +42,7 @@ Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are 
 | [Delivery diagnostics](docs/notification-reports.md) | Device receipt, image outcomes, click timestamps and estimated returns |
 | [Data and lifecycle](docs/data-and-lifecycle.md) | Collected data, synchronization, retries, storage |
 | [Compatibility](docs/compatibility.md) | API baseline, persistent components, versioning |
-| [Data and users](docs/data-and-users.md) | Collected fields, sessions, consent and verified External ID (unreleased) |
+| [Data and users](docs/data-and-users.md) | Collected fields, sessions, consent and verified External ID (available since 0.0.2) |
 | [Testing](docs/testing.md) | Local checks, consumer verification, emulator scenarios |
 | [Release process](docs/releasing.md) | Maven artifacts, publishing and maintaining releases |
 | [Licensing](docs/licensing.md) | SDK license, attribution and distribution scope |

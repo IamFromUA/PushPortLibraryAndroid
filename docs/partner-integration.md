@@ -23,4 +23,4 @@ The parameter and suffix above are partner-specific examples. Use a URL builder 
 
 The partner must return the original PushPort user UUID without any decoration to our API. It is not Android ID, the FCM token, or the installation UUID. `external_id` in an offer macro is a partner naming convention, independent of `PushPort.login` account identity.
 
-Create the partner's app-scoped API key in Application → Settings → API keys. Keep it on the partner's server, never in the APK or URL. The API supports one user per lookup and up to 10,000 IDs per push request. See [the API contract](https://pushport.dev/en/docs/#external-api).
+Create the partner's app-scoped API key in Application → Settings → API keys. Keep it on the partner's server, never in the APK or URL. The API supports one user per lookup and up to 10,000 IDs per push request. See [the API contract](https://pushport.dev/docs/#external-api).
