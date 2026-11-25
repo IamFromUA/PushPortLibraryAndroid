@@ -6,7 +6,7 @@ Android push notifications with a small Kotlin API, automatic installation regis
 PushPort.initWithContext(this, "PUSHPORT_APP_ID")
 ```
 
-**Android SDK 0.0.5** uses Maven coordinates `dev.pushport:android-sdk:0.0.5`. The SDK is licensed under [Apache License 2.0](LICENSE).
+**Android SDK 0.1.1** uses Maven coordinates `dev.pushport:android-sdk:0.1.1`. The SDK is licensed under [Apache License 2.0](LICENSE).
 
 SDK 0.0.5 supports static GIF images and retains big pictures up to 2000 pixels per side. The default download limit remains 5 MiB (optionally 1–20 MiB).
 
@@ -19,7 +19,7 @@ SDK 0.0.4 added separate Android thumbnails and custom status icons. See [Androi
 
    ```kotlin
    dependencies {
-       implementation("dev.pushport:android-sdk:0.0.5")
+       implementation("dev.pushport:android-sdk:0.1.1")
    }
    ```
 
@@ -30,6 +30,21 @@ The dependency resolves through `mavenCentral()`. Add `google()` for Android and
 Firebase Messaging, WorkManager, manifest components, and consumer R8 rules are included through the dependency. The host application does not need a PushPort service-account key, `google-services.json`, or Google Services Gradle plugin for this integration. Its own Firebase integration can remain independent.
 
 **Requirements:** Android 6.0 / API 23+, a device with Google Play services for FCM delivery, and a reachable PushPort backend. This project builds with compile SDK 36, AGP 9.2.1 and Java 17 bytecode. See the [compatibility policy](docs/compatibility.md) before integrating into an older toolchain.
+
+## Application profiles
+
+Available in Android SDK 0.1.1.
+
+An operator must allow profiles for the project's owner in **Users**. The owner or a manager can then enable **App profiles** at project creation or in Settings. Both switches default to off. Each project has up to three named profiles including `default`. IDs survive renames. The optional `value` is public and can identify a screen or a content variant.
+
+```kotlin
+val profile = PushPort.resolveAppProfile(context) // after initialization, in a coroutine
+if (profile.value == "catalog") openCatalog() else openHome()
+```
+
+Use `PushPort.appProfile(context)` for an immediate local read.
+
+The startup check shares the normal configuration request. When the network is slow, the resolver waits up to about one second and uses the last confirmed profile, or `default` on the first offline launch. Turning either switch off selects the default on the next successful check. The app chooses its own screen and can ignore unknown values. Reading the profile needs no notification permission.
 
 ## Documentation
 

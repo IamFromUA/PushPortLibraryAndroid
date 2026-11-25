@@ -25,6 +25,7 @@ internal class SyncCoordinator(
     private val scheduler: SyncScheduler,
     private val clock: Clock,
     private val debuggable: Boolean,
+    private val onProfileChecked: () -> Unit = {},
 ) {
     private val mutex = Mutex()
 
@@ -36,7 +37,19 @@ internal class SyncCoordinator(
                 val api = apiFactory.create(config.validate(debuggable))
                 val preliminary = collector.capture() ?: return@withLock SyncOutcome.SUCCESS
                 val remote = api.settings(preliminary.packageName)
-                repository.update { it.copy(imageLimitBytes = remote.imageLimitBytes, telemetryEnabled = remote.telemetryVersion >= 1) }
+                repository.update {
+                    if (it.collectionAllowed) {
+                        it.copy(
+                            appProfile = remote.appProfile,
+                            imageLimitBytes = remote.imageLimitBytes,
+                            telemetryEnabled =
+                                remote.telemetryVersion >= 1,
+                        )
+                    } else {
+                        it
+                    }
+                }
+                onProfileChecked()
                 val firebase = remote.firebase
                 if (!repository.read().collectionAllowed) return@withLock SyncOutcome.SUCCESS
                 val tokenOutcome = tokens.refresh(firebase)
@@ -68,7 +81,11 @@ internal class SyncCoordinator(
                             lastSyncedAt = clock.nowMillis(),
                             syncError = null,
                             user =
-                                user?.takeIf { profile -> profile.revision >= (it.user?.revision ?: 0) } ?: it.user,
+                                user?.takeIf { profile ->
+                                    it.collectionAllowed &&
+                                        it.pendingUserOperations.none { op -> op.kind == "login" || op.kind == "logout" } &&
+                                        profile.revision >= (it.user?.revision ?: 0)
+                                } ?: it.user,
                         )
                     }
                 }
@@ -77,13 +94,37 @@ internal class SyncCoordinator(
                     api.opened(identity, messageId)
                     repository.update { it.copy(pendingOpenedMessages = it.pendingOpenedMessages - messageId) }
                 }
-                for (operation in repository.read().pendingUserOperations) {
+                val telemetryRetry = flushTelemetry(api, identity)
+                for (index in 0 until 100) {
+                    val operation = repository.read().pendingUserOperations.firstOrNull() ?: break
                     if (!repository.read().collectionAllowed) return@withLock SyncOutcome.SUCCESS
-                    if (repository.read().pendingUserOperations.none { it.revision == operation.revision }) continue
+                    if (operation.kind == "login" && operation.identityToken == null) {
+                        repository.update { it.copy(syncError = "identity_token_required") }
+                        return@withLock if (telemetryRetry ||
+                            tokenOutcome == TokenRefreshOutcome.RETRY
+                        ) {
+                            retryOrFail(attempt)
+                        } else {
+                            SyncOutcome.FAILURE
+                        }
+                    }
                     val user =
                         try {
                             api.updateUser(identity, operation)
                         } catch (error: HttpFailure) {
+                            if (operation.kind == "login" && error.status == 401) {
+                                repository.update { current ->
+                                    if (current.pendingUserOperations.firstOrNull() != operation) {
+                                        current
+                                    } else {
+                                        current.copy(
+                                            pendingUserOperations =
+                                                listOf(operation.copy(identityToken = null)) + current.pendingUserOperations.drop(1),
+                                        )
+                                    }
+                                }
+                                continue
+                            }
                             // Invalid metadata must not poison the outbox forever. Identity failures stay queued
                             // so later properties cannot be applied to the previous account accidentally.
                             if (operation.kind != "login" && error.status in setOf(400, 422)) {
@@ -101,6 +142,11 @@ internal class SyncCoordinator(
                         }
                     check(user.revision >= operation.revision) { "Unacknowledged user operation" }
                     repository.update {
+                        if (!it.collectionAllowed ||
+                            it.pendingUserOperations.firstOrNull()?.revision != operation.revision
+                        ) {
+                            return@update it
+                        }
                         it.copy(
                             user = user,
                             pendingUserOperations =
@@ -112,7 +158,6 @@ internal class SyncCoordinator(
                     }
                 }
                 repository.update { it.copy(syncError = null) }
-                val telemetryRetry = flushTelemetry(api, identity)
                 if (repository.read().revision != snapshot.revision ||
                     repository.read().pendingUserOperations.isNotEmpty()
                 ) {

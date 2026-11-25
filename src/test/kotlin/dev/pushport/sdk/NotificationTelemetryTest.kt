@@ -9,9 +9,11 @@ import dev.pushport.sdk.internal.core.SyncCoordinator
 import dev.pushport.sdk.internal.core.SyncOutcome
 import dev.pushport.sdk.internal.core.TelemetryTracker
 import dev.pushport.sdk.internal.core.TokenRefresher
+import dev.pushport.sdk.internal.core.UserController
 import dev.pushport.sdk.internal.model.InstallationIdentity
 import dev.pushport.sdk.internal.model.RemoteConfiguration
 import dev.pushport.sdk.internal.model.TelemetryEvent
+import dev.pushport.sdk.internal.model.UserOperation
 import dev.pushport.sdk.internal.network.NotificationImageDownloader
 import dev.pushport.sdk.internal.ports.Clock
 import dev.pushport.sdk.internal.ports.HttpFailure
@@ -83,6 +85,64 @@ class NotificationTelemetryTest {
         )
         assertEquals(4L, fixture.repository.read().telemetryDropped)
     }
+
+    @Test fun `expired profile proof still retries and acknowledges notification telemetry`() =
+        runBlocking {
+            val fixture = CoreFixture()
+            val tracker = TelemetryTracker(fixture.repository, fixture.scheduler) { fixture.now }
+            val users = UserController(fixture.repository, fixture.scheduler)
+            val api =
+                object : InstallationApi by fixture.api {
+                    var offline = true
+
+                    override fun settings(packageName: String) = RemoteConfiguration(null, telemetryVersion = 1)
+
+                    override fun telemetry(
+                        identity: InstallationIdentity,
+                        events: List<TelemetryEvent>,
+                        dropped: Long,
+                    ): List<String> {
+                        if (offline) throw IOException("offline")
+                        return events.map { it.id }
+                    }
+                }
+            val coordinator =
+                SyncCoordinator(
+                    fixture.repository,
+                    fixture.collector,
+                    TokenRefresher(fixture.repository, fixture.provider),
+                    InstallationApiFactory { api },
+                    fixture.scheduler,
+                    Clock { fixture.now },
+                    true,
+                )
+            var attempts = 0
+            fixture.api.onUser = {
+                attempts++
+                throw HttpFailure(401)
+            }
+            users.enqueue(UserOperation(kind = "login", externalId = "player", identityToken = "a".repeat(43)))
+            tracker.record("posted", UUID.randomUUID().toString())
+            assertEquals(SyncOutcome.RETRY, coordinator.synchronize(0))
+            val codec = InstallationStateJson()
+            fixture.repository.update { codec.decode(codec.encode(it)) }
+            assertEquals(
+                1,
+                fixture.repository
+                    .read()
+                    .pendingUserOperations.size,
+            )
+            api.offline = false
+            assertEquals(SyncOutcome.FAILURE, coordinator.synchronize(1))
+            assertTrue(
+                fixture.repository
+                    .read()
+                    .pendingTelemetry
+                    .isEmpty(),
+            )
+            assertEquals("identity_token_required", fixture.repository.read().syncError)
+            assertEquals(1, attempts)
+        }
 
     @Test fun `telemetry retries preserve IDs acknowledge only received IDs and flush more than one batch`() =
         runBlocking {

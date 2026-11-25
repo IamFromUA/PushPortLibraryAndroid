@@ -1,3 +1,20 @@
+public final class dev/pushport/sdk/AppProfile {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/pushport/sdk/AppProfile;
+	public static synthetic fun copy$default (Ldev/pushport/sdk/AppProfile;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/pushport/sdk/AppProfile;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/pushport/sdk/EnvironmentReceiver : android/content/BroadcastReceiver {
 	public fun <init> ()V
 	public fun onReceive (Landroid/content/Context;Landroid/content/Intent;)V
@@ -14,6 +31,8 @@ public final class dev/pushport/sdk/NotificationOpenActivity : android/app/Activ
 
 public final class dev/pushport/sdk/PushPort {
 	public static final field INSTANCE Ldev/pushport/sdk/PushPort;
+	public static final fun appProfile (Landroid/content/Context;)Ldev/pushport/sdk/AppProfile;
+	public static final fun appProfileJson (Landroid/content/Context;)Ljava/lang/String;
 	public static final fun handleNotificationIntent (Landroid/content/Context;Landroid/content/Intent;)V
 	public static final fun init (Landroid/content/Context;Ldev/pushport/sdk/PushPortConfig;)V
 	public static final fun initWithContext (Landroid/content/Context;Ljava/lang/String;)V
@@ -22,6 +41,7 @@ public final class dev/pushport/sdk/PushPort {
 	public static final fun requestNotificationPermission (Landroid/app/Activity;)V
 	public static final fun requestNotificationPermission (Landroid/app/Activity;I)V
 	public static synthetic fun requestNotificationPermission$default (Landroid/app/Activity;IILjava/lang/Object;)V
+	public static final fun resolveAppProfile (Landroid/content/Context;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun restore (Landroid/content/Context;)Z
 	public static final fun setConsentGiven (Landroid/content/Context;Z)V
 	public static final fun setConsentRequired (Landroid/content/Context;Z)V

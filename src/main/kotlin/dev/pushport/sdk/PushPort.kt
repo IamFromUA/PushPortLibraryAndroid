@@ -25,6 +25,25 @@ import dev.pushport.sdk.internal.runtime.SdkRuntime
  * [requestNotificationPermission] or the host application's permission flow.
  */
 public object PushPort {
+    /** Reads the cached application profile immediately, including the first-launch default. */
+    @JvmStatic
+    public fun appProfile(context: Context): AppProfile = SdkRuntime.from(context).appProfile()
+
+    /** Await this launch's configuration for up to a second, then use the cached profile. */
+    @JvmStatic
+    public suspend fun resolveAppProfile(context: Context): AppProfile = SdkRuntime.from(context).resolveAppProfile()
+
+    /** Stable bridge for independently versioned Unity and Kotlin Multiplatform adapters. */
+    @JvmStatic
+    public fun appProfileJson(context: Context): String {
+        val runtime = SdkRuntime.from(context)
+        return runtime
+            .appProfile()
+            .toJson()
+            .put("ready", runtime.profileReady())
+            .toString()
+    }
+
     /** Last confirmed profile; null before registration. Does not make a network request. */
     @JvmStatic
     public fun user(context: Context): PushPortUser? = SdkRuntime.from(context).users.profile()

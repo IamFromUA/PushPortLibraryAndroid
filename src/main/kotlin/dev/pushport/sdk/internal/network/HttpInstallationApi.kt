@@ -8,28 +8,36 @@ import dev.pushport.sdk.internal.model.FirebaseConfiguration
 import dev.pushport.sdk.internal.model.InstallationIdentity
 import dev.pushport.sdk.internal.ports.InstallationApi
 import dev.pushport.sdk.internal.serialization.WireJson
+import dev.pushport.sdk.readAppProfile
 import org.json.JSONObject
 import java.net.URLEncoder
 
 internal class HttpInstallationApi(
     private val transport: UrlConnectionTransport,
+    private val startupSettings: StartupSettings? = null,
 ) : InstallationApi {
     private var telemetryVersion = 0
 
     override fun configuration(packageName: String): FirebaseConfiguration? = settings(packageName).firebase
 
     override fun settings(packageName: String): dev.pushport.sdk.internal.model.RemoteConfiguration {
+        val result = startupSettings?.read(packageName) { fetchSettings(packageName) } ?: fetchSettings(packageName)
+        telemetryVersion = result.telemetryVersion
+        return result
+    }
+
+    private fun fetchSettings(packageName: String): dev.pushport.sdk.internal.model.RemoteConfiguration {
         val encoded = URLEncoder.encode(packageName, "UTF-8")
         val response = transport.request("GET", "/config?packageName=$encoded")
         val document = JSONObject(response)
         require(document.has("firebase")) { "Missing Firebase configuration field" }
-        telemetryVersion = document.optInt("telemetryVersion", 0)
         return dev.pushport.sdk.internal.model.RemoteConfiguration(
             if (document.isNull("firebase")) null else WireJson.firebase(document.getJSONObject("firebase")),
             document
                 .optInt("imageLimitBytes", dev.pushport.sdk.internal.model.DEFAULT_IMAGE_BYTES)
                 .coerceIn(1024 * 1024, dev.pushport.sdk.internal.model.MAX_IMAGE_BYTES),
-            telemetryVersion,
+            document.optInt("telemetryVersion", 0),
+            document.optJSONObject("appProfile").readAppProfile(),
         )
     }
 

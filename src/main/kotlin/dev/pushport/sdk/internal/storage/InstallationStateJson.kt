@@ -10,6 +10,8 @@ import dev.pushport.sdk.internal.serialization.UserJson
 import dev.pushport.sdk.internal.serialization.WireJson
 import dev.pushport.sdk.internal.serialization.stringOrNull
 import dev.pushport.sdk.internal.serialization.strings
+import dev.pushport.sdk.readAppProfile
+import dev.pushport.sdk.toJson
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -64,6 +66,7 @@ internal class InstallationStateJson {
                                     .decode(array.getJSONObject(it))
                             }.takeLast(dev.pushport.sdk.internal.model.MAX_TELEMETRY_EVENTS)
                     }.orEmpty(),
+            appProfile = json.optJSONObject("appProfile").readAppProfile(),
             telemetryEnabled = json.optBoolean("telemetryEnabled"),
             telemetryDropped = json.optLong("telemetryDropped"),
             lastReceivedMessageId = json.stringOrNull("lastReceivedMessageId"),
@@ -102,6 +105,7 @@ internal class InstallationStateJson {
                 .put("consentRequired", state.consentRequired)
                 .put("consentGiven", state.consentGiven)
                 .put("telemetry", JSONArray(state.pendingTelemetry.map(dev.pushport.sdk.internal.serialization.TelemetryJson::encode)))
+                .put("appProfile", state.appProfile.toJson())
                 .put("telemetryEnabled", state.telemetryEnabled)
                 .put("telemetryDropped", state.telemetryDropped)
                 .put("imageLimitBytes", state.imageLimitBytes)

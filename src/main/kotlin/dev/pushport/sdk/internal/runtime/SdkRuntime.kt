@@ -31,6 +31,12 @@ import dev.pushport.sdk.internal.platform.WorkManagerSyncScheduler
 import dev.pushport.sdk.internal.ports.Clock
 import dev.pushport.sdk.internal.ports.InstallationApiFactory
 import dev.pushport.sdk.internal.storage.AtomicInstallationRepository
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.security.SecureRandom
 import java.util.UUID
 
@@ -53,15 +59,62 @@ internal class SdkRuntime private constructor(
             .UserController(repository, scheduler)
 
     val controller = InstallationController(repository, collector, scheduler, notifications, ::newIdentity, debuggable)
+    private val profileScope = CoroutineScope(Dispatchers.IO)
+    private var startupSettings =
+        dev.pushport.sdk.internal.network
+            .StartupSettings()
+    private var launchLookup: Job? = null
+
+    @Volatile
+    private var profileChecked = CompletableDeferred<Unit>()
+
+    @Synchronized
+    private fun api(config: PushPortConfig): HttpInstallationApi = HttpInstallationApi(UrlConnectionTransport(config), startupSettings)
+
+    private fun checkLaunchProfile(config: PushPortConfig) {
+        if (launchLookup != null) return
+        startupSettings.begin()
+        val checked = profileChecked
+        val client = api(config.validate(debuggable))
+        launchLookup =
+            profileScope.launch {
+                try {
+                    if (!repository.read().collectionAllowed) return@launch
+                    val selected = client.settings(application.packageName).appProfile
+                    if (isActive) repository.update { if (it.collectionAllowed) it.copy(appProfile = selected) else it }
+                } catch (_: Exception) {
+                    // The durable sync worker owns retries. A startup screen can use its cached selection.
+                } finally {
+                    checked.complete(Unit)
+                }
+            }
+    }
+
+    fun appProfile(): dev.pushport.sdk.AppProfile {
+        val state = repository.read()
+        return if (state.collectionAllowed) state.appProfile else dev.pushport.sdk.AppProfile()
+    }
+
+    fun profileReady(): Boolean = profileChecked.isCompleted || !repository.read().collectionAllowed
+
+    suspend fun resolveAppProfile(): dev.pushport.sdk.AppProfile {
+        val state = repository.read()
+        if (state.config != null && state.collectionAllowed) {
+            kotlinx.coroutines.withTimeoutOrNull(1000L) { profileChecked.await() }
+        }
+        return appProfile()
+    }
+
     val synchronizer =
         SyncCoordinator(
             repository,
             collector,
             tokens,
-            InstallationApiFactory { HttpInstallationApi(UrlConnectionTransport(it)) },
+            InstallationApiFactory(::api),
             scheduler,
             Clock(System::currentTimeMillis),
             debuggable,
+            { profileChecked.complete(Unit) },
         )
     val pushHandler = PushHandler(repository, presenter, telemetry)
     private val openTracker = NotificationOpenTracker(repository, scheduler, telemetry)
@@ -93,6 +146,7 @@ internal class SdkRuntime private constructor(
         presenter.createChannel()
         observer.register()
         if (!repository.read().collectionAllowed) return
+        checkLaunchProfile(config)
         tokens.restore()
         if (observer.isForeground) sessions.foreground()
         controller.sync()
@@ -111,13 +165,24 @@ internal class SdkRuntime private constructor(
                 next
             } else {
                 next.copy(
+                    appProfile = dev.pushport.sdk.AppProfile(),
                     pendingTelemetry = emptyList(),
                     lastReceivedMessageId = null,
                     lastClickedMessageId = null,
                 )
             }
         }
-        repository.read().config?.let(::initialize)
+        val state = repository.read()
+        if (!state.collectionAllowed) {
+            launchLookup?.cancel()
+            launchLookup = null
+            profileChecked.complete(Unit)
+            profileChecked = CompletableDeferred()
+            startupSettings =
+                dev.pushport.sdk.internal.network
+                    .StartupSettings()
+        }
+        state.config?.let(::initialize)
     }
 
     fun restore(): Boolean {

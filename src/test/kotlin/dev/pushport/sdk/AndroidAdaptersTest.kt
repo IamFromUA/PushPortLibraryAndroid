@@ -188,6 +188,52 @@ class AndroidAdaptersTest {
         }
     }
 
+    @Test fun `startup config is shared with registration workers until it expires`() {
+        var now = 0L
+        val cache =
+            dev.pushport.sdk.internal.network
+                .StartupSettings { now }
+        cache.begin()
+        var count = 0
+
+        fun read() =
+            cache.read("dev.pushport.consumer") {
+                count++
+                dev.pushport.sdk.internal.model
+                    .RemoteConfiguration(null, telemetryVersion = count)
+            }
+        assertEquals(1, read().telemetryVersion)
+        assertEquals(1, read().telemetryVersion)
+        now =
+            java.util.concurrent.TimeUnit.SECONDS
+                .toNanos(11)
+        assertEquals(2, read().telemetryVersion)
+    }
+
+    @Test fun `app profile uses the existing config and survives storage and old servers`() {
+        MockWebServer().use { server ->
+            val api = HttpInstallationApi(UrlConnectionTransport(PushPortConfig(TEST_APP_ID, server.url("/").toString(), true)))
+            val profile = AppProfile("custom", "Новая витрина", "catalog")
+            val config = JSONObject().put("firebase", JSONObject.NULL).put("appProfile", profile.toJson())
+            server.enqueue(MockResponse().setBody(config.toString()))
+            val remote = api.settings("dev.pushport.testapp")
+            assertEquals(profile, remote.appProfile)
+            val codec =
+                dev.pushport.sdk.internal.storage
+                    .InstallationStateJson()
+            val saved =
+                codec.encode(
+                    dev.pushport.sdk.internal.model
+                        .InstallationState(appProfile = remote.appProfile),
+                )
+            assertEquals(profile, codec.decode(saved).appProfile)
+            assertEquals(AppProfile(), codec.decode("{}").appProfile)
+            server.enqueue(MockResponse().setBody("""{"firebase":null}"""))
+            assertEquals(AppProfile(), api.settings("dev.pushport.testapp").appProfile)
+            assertEquals(2, server.requestCount)
+        }
+    }
+
     @Test fun `registration advertises metrics only after server capability negotiation`() {
         MockWebServer().use { server ->
             val api = HttpInstallationApi(UrlConnectionTransport(PushPortConfig(TEST_APP_ID, server.url("/").toString(), true)))

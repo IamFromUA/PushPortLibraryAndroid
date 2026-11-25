@@ -1,6 +1,6 @@
 # Data collection and user identity
 
-Available starting with **Android SDK 0.0.2**. The production backend at `https://pushport.dev` supports this contract; the current Android release is **0.0.5**. Existing installations and their credentials are preserved when upgrading from 0.0.1.
+Available starting with **Android SDK 0.0.2**. The production backend at `https://pushport.dev` supports this contract; the current Android release is **0.1.1**. Existing installations and their credentials are preserved when upgrading from 0.0.1.
 
 ## Automatic data
 
@@ -76,6 +76,8 @@ An existing External ID switches this subscription to the known user without cop
 Calls enqueue changes; they do not wait for a server response. Check `status().syncError` and `user()` for confirmation. Up to 100 operations persist in no-backup storage; a full queue throws instead of silently losing events. Retries use monotonic revisions to avoid duplicate application. Login/logout discard **unsent** user operations from the prior account, while already in-flight requests may finish. A failed login blocks subsequent queued user properties so they cannot land on the previous account. Renewed login or logout replaces that queue. Telemetry synchronization continues independently. Metadata rejected permanently with HTTP 400/422 is removed and reported through syncError; later operations proceed on the next synchronization. Authentication failures remain queued until corrected.
 
 Limits: 50 tags, keys ≤64 and values ≤256 characters; External ID ≤128 without leading/trailing whitespace; event name starts with a letter and contains letters/digits/`_.-`, ≤64; up to 20 event properties (64/256); email ≤254; phone in E.164. Null tag values remove keys. Property values and credentials are redacted from model `toString()` output.
+
+In the development SDK, `syncError == "identity_token_required"` means a queued login needs a fresh identity token. Obtain it from your backend for the same installation and External ID, then call login again. Pending profile changes resume in order. Notification statistics continue to sync while login waits. Logging out or logging in with a different External ID discards edits queued for the prior account.
 
 ## OneSignal comparison
 

@@ -76,6 +76,7 @@ internal data class InstallationState(
     val consentRequired: Boolean = false,
     val consentGiven: Boolean = false,
     val pendingTelemetry: List<TelemetryEvent> = emptyList(),
+    val appProfile: dev.pushport.sdk.AppProfile = dev.pushport.sdk.AppProfile(),
     val telemetryEnabled: Boolean = false,
     val telemetryDropped: Long = 0,
     val imageLimitBytes: Int = DEFAULT_IMAGE_BYTES,

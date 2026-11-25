@@ -20,10 +20,19 @@ internal class UserController(
         repository.update { state ->
             require(state.config != null && state.identity != null) { "Initialize PushPort first" }
             check(state.collectionAllowed) { "User consent is required" }
+            val first = state.pendingUserOperations.firstOrNull()
+            if (operation.kind == "login" && first?.kind == "login" && first.externalId == operation.externalId) {
+                return@update state.copy(
+                    pendingUserOperations =
+                        listOf(first.copy(identityToken = operation.identityToken)) + state.pendingUserOperations.drop(1),
+                    syncError = null,
+                )
+            }
             val pending = if (operation.kind in setOf("login", "logout")) emptyList() else state.pendingUserOperations
             check(pending.size < 100) { "User operation queue is full; wait for synchronization" }
             val revision = maxOf(state.nextUserRevision, state.user?.revision ?: 0) + 1
             state.copy(
+                user = if (operation.kind in setOf("login", "logout")) null else state.user,
                 nextUserRevision = revision,
                 pendingUserOperations =
                     pending +

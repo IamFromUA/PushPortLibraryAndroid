@@ -18,6 +18,36 @@ import org.junit.Test
 import java.io.IOException
 
 class UserAndUsageTest {
+    @Test fun `expired login preserves dependent edits and fresh proof resumes the same revisions`() =
+        runBlocking {
+            val f = CoreFixture()
+            val users = UserController(f.repository, f.scheduler)
+            val calls = mutableListOf<UserOperation>()
+            f.api.onUser = { op ->
+                calls += op
+                if (op.identityToken == "a".repeat(43)) throw HttpFailure(401)
+                PushPortUser("user", "player", emptyMap(), null, null, null, null, op.revision)
+            }
+            users.enqueue(UserOperation(kind = "login", externalId = "player", identityToken = "a".repeat(43)))
+            users.enqueue(UserOperation(kind = "tags", tags = mapOf("level" to "2")))
+            assertEquals(SyncOutcome.FAILURE, f.coordinator().synchronize(0))
+            assertEquals("identity_token_required", f.repository.read().syncError)
+            assertNull(
+                f.repository
+                    .read()
+                    .pendingUserOperations
+                    .first()
+                    .identityToken,
+            )
+            assertEquals(SyncOutcome.FAILURE, f.coordinator().synchronize(0))
+            assertEquals(1, calls.size)
+            users.enqueue(UserOperation(kind = "login", externalId = "player", identityToken = "b".repeat(43)))
+            assertEquals(SyncOutcome.SUCCESS, f.coordinator().synchronize(0))
+            assertEquals(listOf(1L, 1L, 2L), calls.map { it.revision })
+            assertEquals("tags", calls.last().kind)
+            assertNull(f.repository.read().syncError)
+        }
+
     @Test fun `foreground sessions distinguish short pauses from new visits and use monotonic time`() {
         val f = CoreFixture()
         var wall = 100000L

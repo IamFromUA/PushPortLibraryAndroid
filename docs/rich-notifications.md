@@ -45,4 +45,4 @@ Opening analytics indicate a notification tap reported by this installation. FCM
 
 ## Upgrade
 
-Use `dev.pushport:android-sdk:0.0.5` for static GIF, 2000-pixel big pictures and Android icon support. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with earlier PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.
+Use `dev.pushport:android-sdk:0.1.1` for static GIF, 2000-pixel big pictures and Android icon support. Earlier version numbers, including 0.2.0 and 0.3.0, were local builds that were never published to Maven Central. Public API calls, installation credentials, app ID, state file and notification channel remain compatible with earlier PushPort builds. OkHttp and WorkManager are transitive implementation dependencies. `NotificationImageWorker` is a retained Android entry point, not an application integration API.

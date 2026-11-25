@@ -7,4 +7,5 @@ internal data class RemoteConfiguration(
     val firebase: FirebaseConfiguration?,
     val imageLimitBytes: Int = DEFAULT_IMAGE_BYTES,
     val telemetryVersion: Int = 0,
+    val appProfile: dev.pushport.sdk.AppProfile = dev.pushport.sdk.AppProfile(),
 )
